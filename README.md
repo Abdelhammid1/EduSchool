@@ -1,42 +1,52 @@
-# منصتي (Manasety) — School Management System
+# EduSchool / منصتي (Manasety)
 
-نظام إدارة مدرسية متكامل لمدرسة صالح الشريف (المرحلة الأولى — الأساس).
+نظام إدارة مدرسية متكامل — School ERP + SIS + Educational Portal
 
 ## Stack
-Flask 3 · PostgreSQL · SQLAlchemy · Flask-Migrate · Flask-Login · Bcrypt · Jinja2 (RTL)
+Flask 3 · PostgreSQL · SQLAlchemy · Flask-Migrate · Flask-Login · Bcrypt · Flask-WTF (CSRF) · Jinja2 (RTL)
 
-## Quick start
+## Completed Sprints (5 of 6)
+
+| # | Module | Tasks | Status |
+|---|---|---|---|
+| 1 | Foundation — users/roles/perms + academic structure | T-1.1→1.3, T-2.1→2.4 | ✅ |
+| 2 | Students — permanent profile, enrollment, transfers, promotion | T-3.1→3.5 | ✅ |
+| 3 | Teachers & Schedules — assignments, time grid, conflict prevention | T-4.1→4.3, T-5.1→5.4 | ✅ |
+| 4 | Attendance & Results — daily marking, WhatsApp Integration Point, flexible pass rule | T-6.1→6.3, T-7.1→7.6 | ✅ |
+| 5 | Finance ERP + HR — chart of accounts, double-entry journal, invoices, payroll | T-8.1→8.5, T-9.1→9.3 | ✅ |
+| 6 | Teacher portal + Mobile apps (Flask REST + Flutter) | T-10.1→10.3 | Pending |
+
+## Deployment
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full Arabic guide:
+- Hetzner Cloud server setup (Ubuntu + nginx + gunicorn + systemd + Let's Encrypt)
+- PostgreSQL provisioning
+- Initial admin seed
+- Admin onboarding walkthrough (year → terms → grades → sections → teachers → students → operations)
+- Daily backups + maintenance
+
+## Local quick start
 
 ```bash
-# 1. Postgres database
-createdb -U postgres manasety
-psql -U postgres -c "CREATE USER manasety WITH PASSWORD 'manasety';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE manasety TO manasety;"
-
-# 2. Python env
-python3 -m venv .venv
-source .venv/bin/activate
+createdb manasety
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Config
-cp .env.example .env
-
-# 4. Migrate + seed
-flask db init        # first time only
-flask db migrate -m "init"
-flask db upgrade
+cp .env.example .env        # edit DATABASE_URL if needed
+flask --app flask_app db upgrade
 python -m seeds.seed
-
-# 5. Run (kill anything on :5000 first)
-lsof -ti:5000 | xargs kill -9 2>/dev/null
 python flask_app.py
 ```
 
-Open http://localhost:5000 — login `admin` / `admin12345`.
+Login: `admin` / `admin12345` at http://localhost:5050.
 
-## Sprint 1 scope (this commit)
-- **§1 Foundation**: T-1.1 secure login + lockout · T-1.2 roles & permissions matrix · T-1.3 user management
-- **§2 Academic structure**: T-2.1 academic years (single-active rule) · T-2.2 terms with weights · T-2.3 grades · T-2.4 sections
+## Architecture highlights
 
-## Coming next (per the Backlog PDF)
-S2 Students · S3 Teachers + Schedules · S4 Attendance + Results · S5 Finance (ERP) · S6 Portals + Mobile apps
+- **Multi-tenant from day 1**: `school_id` FK on every table
+- **Annual binding**: student data permanent, year-specific data (enrollment, grades, fees) per-year
+- **Double-entry accounting**: `services/accounting.py` enforces DR=CR atomically on every financial operation
+- **Configurable everywhere**: roles, fee types, accounts, assessment components, pass rules — all editable from UI
+- **Integration Point**: WhatsApp notifications abstracted in `services/notifications.py`, swappable provider
+- **Approval freeze**: year results snapshot `rule_snapshot` + `subject_scores` JSON for archival immutability
+
+## Repo
+https://github.com/Abdelhammid1/EduSchool
