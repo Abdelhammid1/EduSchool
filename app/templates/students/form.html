@@ -58,6 +58,14 @@
     <div class="field"><label>ملاحظات</label>
       <textarea name="notes" rows="2">{{ student.notes or '' if student else f.get('notes','') }}</textarea>
     </div>
+    <div class="field">
+      <label>ربط ولي الأمر بحساب مستخدم (لتطبيق ولي الأمر)</label>
+      <select name="parent_user_id">
+        <option value="">— لا يوجد —</option>
+        {% for u in parent_users %}<option value="{{ u.id }}" {% if student and student.parent_user_id == u.id %}selected{% endif %}>{{ u.full_name }} ({{ u.username }})</option>{% endfor %}
+      </select>
+      <div class="hint">ولي أمر مرتبط بحساب يستطيع رؤية حضور أبنائه ونتائجهم وفواتيرهم.</div>
+    </div>
   </div>
 
   <div class="mt-2 flex">

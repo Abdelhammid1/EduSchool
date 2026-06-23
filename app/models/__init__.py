@@ -10,6 +10,7 @@ from .finance import (
     Installment, Payment, Vendor, Expense,
 )
 from .hr import Employee, Payroll
+from .material import Material
 
 __all__ = [
     "School", "User", "Role",
@@ -22,4 +23,5 @@ __all__ = [
     "Invoice", "InvoiceLine", "Installment", "Payment",
     "Vendor", "Expense",
     "Employee", "Payroll",
+    "Material",
 ]

@@ -19,10 +19,12 @@ class Student(db.Model):
     parent_name = db.Column(db.String(160))
     parent_phone = db.Column(db.String(32))
     parent_email = db.Column(db.String(128))
+    parent_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
     address = db.Column(db.String(255))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    parent_user = db.relationship("User", foreign_keys=[parent_user_id], backref="children")
     enrollments = db.relationship(
         "Enrollment", backref="student", order_by="Enrollment.id.desc()"
     )

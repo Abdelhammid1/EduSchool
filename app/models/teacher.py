@@ -14,6 +14,7 @@ class Teacher(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     school_id = db.Column(db.Integer, db.ForeignKey("schools.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, index=True)
     full_name = db.Column(db.String(160), nullable=False)
     national_id = db.Column(db.String(32))
     phone = db.Column(db.String(32))
@@ -23,6 +24,8 @@ class Teacher(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("teacher_profile", uselist=False))
 
 
 class Subject(db.Model):

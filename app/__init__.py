@@ -32,6 +32,8 @@ def create_app(config_class=Config):
     from .blueprints.results import bp as results_bp
     from .blueprints.finance import bp as finance_bp
     from .blueprints.hr import bp as hr_bp
+    from .blueprints.portal import bp as portal_bp
+    from .blueprints.api import bp as api_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/")
@@ -44,6 +46,8 @@ def create_app(config_class=Config):
     app.register_blueprint(results_bp, url_prefix="/results")
     app.register_blueprint(finance_bp, url_prefix="/finance")
     app.register_blueprint(hr_bp, url_prefix="/hr")
+    app.register_blueprint(portal_bp, url_prefix="/portal")
+    app.register_blueprint(api_bp, url_prefix="/api")
 
     @app.route("/")
     def index():

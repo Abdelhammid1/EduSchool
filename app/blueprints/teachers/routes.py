@@ -7,7 +7,7 @@ from . import bp
 from ..utils import require_permission
 from ...extensions import db
 from ...models import (
-    AcademicYear, Assignment, Grade, Section, Subject, Teacher,
+    AcademicYear, Assignment, Grade, Section, Subject, Teacher, User,
 )
 
 
@@ -40,13 +40,14 @@ def teachers_list():
 @login_required
 @require_permission("teachers", "add")
 def teacher_new():
+    users = User.query.filter_by(school_id=_sid()).order_by(User.full_name).all()
     if request.method == "POST":
         if not request.form.get("full_name", "").strip():
             flash("الاسم الكامل حقل إلزامي.", "danger")
-            return render_template("teachers/form.html", teacher=None, form=request.form)
+            return render_template("teachers/form.html", teacher=None, form=request.form, users=users)
         if not request.form.get("specialization", "").strip():
             flash("التخصص حقل إلزامي.", "danger")
-            return render_template("teachers/form.html", teacher=None, form=request.form)
+            return render_template("teachers/form.html", teacher=None, form=request.form, users=users)
 
         teacher = Teacher(
             school_id=_sid(),
@@ -57,12 +58,13 @@ def teacher_new():
             specialization=request.form["specialization"].strip(),
             hire_date=_parse_date(request.form.get("hire_date")),
             notes=(request.form.get("notes") or "").strip() or None,
+            user_id=int(request.form["user_id"]) if request.form.get("user_id") else None,
         )
         db.session.add(teacher)
         db.session.commit()
         flash(f"تم إنشاء ملف المعلم {teacher.full_name}.", "success")
         return redirect(url_for("teachers.teacher_detail", teacher_id=teacher.id))
-    return render_template("teachers/form.html", teacher=None, form={})
+    return render_template("teachers/form.html", teacher=None, form={}, users=users)
 
 
 @bp.route("/<int:teacher_id>")
@@ -92,6 +94,7 @@ def teacher_detail(teacher_id):
 @require_permission("teachers", "edit")
 def teacher_edit(teacher_id):
     teacher = _get(Teacher, teacher_id)
+    users = User.query.filter_by(school_id=_sid()).order_by(User.full_name).all()
     if request.method == "POST":
         teacher.full_name = request.form["full_name"].strip()
         teacher.national_id = (request.form.get("national_id") or "").strip() or None
@@ -100,10 +103,11 @@ def teacher_edit(teacher_id):
         teacher.specialization = request.form["specialization"].strip()
         teacher.hire_date = _parse_date(request.form.get("hire_date"))
         teacher.notes = (request.form.get("notes") or "").strip() or None
+        teacher.user_id = int(request.form["user_id"]) if request.form.get("user_id") else None
         db.session.commit()
         flash("تم تحديث بيانات المعلم.", "success")
         return redirect(url_for("teachers.teacher_detail", teacher_id=teacher.id))
-    return render_template("teachers/form.html", teacher=teacher, form={})
+    return render_template("teachers/form.html", teacher=teacher, form={}, users=users)
 
 
 @bp.route("/<int:teacher_id>/toggle", methods=["POST"])

@@ -8,7 +8,7 @@ from . import bp
 from ..utils import require_permission
 from ...extensions import db
 from ...models import (
-    AcademicYear, Grade, Section, School, Student, Enrollment, TransferLog,
+    AcademicYear, Grade, Section, School, Student, Enrollment, TransferLog, User,
 )
 
 
@@ -71,7 +71,7 @@ def student_new():
                     "أكّد الحفظ إذا كنت متأكدًا.",
                     "warning",
                 )
-                return render_template("students/form.html", student=None, form=request.form, dup=dup)
+                return render_template("students/form.html", student=None, form=request.form, dup=dup, parent_users=_parent_users())
 
         student = Student(
             school_id=_sid(),
@@ -83,6 +83,7 @@ def student_new():
             parent_name=(request.form.get("parent_name") or "").strip() or None,
             parent_phone=(request.form.get("parent_phone") or "").strip() or None,
             parent_email=(request.form.get("parent_email") or "").strip() or None,
+            parent_user_id=int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None,
             address=(request.form.get("address") or "").strip() or None,
             notes=(request.form.get("notes") or "").strip() or None,
         )
@@ -90,7 +91,7 @@ def student_new():
         db.session.commit()
         flash(f"تم إنشاء ملف الطالب — كود دائم: {student.permanent_code}", "success")
         return redirect(url_for("students.student_detail", student_id=student.id))
-    return render_template("students/form.html", student=None, form={}, dup=None)
+    return render_template("students/form.html", student=None, form={}, dup=None, parent_users=_parent_users())
 
 
 @bp.route("/<int:student_id>")
@@ -124,12 +125,17 @@ def student_edit(student_id):
         student.parent_name = (request.form.get("parent_name") or "").strip() or None
         student.parent_phone = (request.form.get("parent_phone") or "").strip() or None
         student.parent_email = (request.form.get("parent_email") or "").strip() or None
+        student.parent_user_id = int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None
         student.address = (request.form.get("address") or "").strip() or None
         student.notes = (request.form.get("notes") or "").strip() or None
         db.session.commit()
         flash("تم تحديث ملف الطالب.", "success")
         return redirect(url_for("students.student_detail", student_id=student.id))
-    return render_template("students/form.html", student=student, form={}, dup=None)
+    return render_template("students/form.html", student=student, form={}, dup=None, parent_users=_parent_users())
+
+
+def _parent_users():
+    return User.query.filter_by(school_id=_sid(), is_active=True).order_by(User.full_name).all()
 
 
 # ---------- T-3.2: Enroll in active year ----------
