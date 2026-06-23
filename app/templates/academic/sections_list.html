@@ -1,0 +1,36 @@
+{% extends "partials/base.html" %}
+{% block title %}الفصول{% endblock %}
+{% block content %}
+<div class="page-title">
+  <div>
+    <h2>الفصول</h2>
+    <div class="sub">
+      {% if active_year %}السنة النشطة: <strong class="text-navy">{{ active_year.name }}</strong>{% endif %}
+      — كل فصل مرتبط بصف وسنة (T-2.4)
+    </div>
+  </div>
+  {% if active_year %}
+  <a href="{{ url_for('academic.section_new') }}" class="btn btn-primary">+ فصل جديد</a>
+  {% endif %}
+</div>
+
+{% if not active_year %}
+<div class="alert warning">لا توجد سنة دراسية نشطة. أنشئ سنة أولاً من شاشة <a href="{{ url_for('academic.years_list') }}">السنوات الدراسية</a>.</div>
+{% endif %}
+
+<table class="data">
+  <thead><tr><th>الصف</th><th>الفصل</th><th>السعة القصوى</th><th>عدد الطلاب الحالي</th></tr></thead>
+  <tbody>
+    {% for s in sections %}
+    <tr>
+      <td><strong>{{ s.grade.name }}</strong></td>
+      <td>{{ s.name }}</td>
+      <td>{{ s.capacity }}</td>
+      <td>{{ s.current_count }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px">لا توجد فصول.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

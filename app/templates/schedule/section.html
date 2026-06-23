@@ -1,0 +1,89 @@
+{% extends "partials/base.html" %}
+{% block title %}جدول فصل {{ section.name }}{% endblock %}
+{% block content %}
+<div class="page-title">
+  <div>
+    <h2>جدول الفصل — {{ section.grade.name }} / {{ section.name }}</h2>
+    <div class="sub">السنة: <strong class="text-navy">{{ year.name }}</strong> — انقر على خانة لتعيين/تعديل الحصة</div>
+  </div>
+  <a href="{{ url_for('schedule.index') }}" class="btn btn-ghost">رجوع</a>
+</div>
+
+{% if not days or not periods %}
+<div class="alert warning">
+  لم تُعرّف الأيام والحصص بعد.
+  <a href="{{ url_for('schedule.settings') }}">اذهب لإعدادات الجدول</a>.
+</div>
+{% elif not assignments %}
+<div class="alert info">
+  لا توجد إسنادات لهذا الفصل بعد.
+  <a href="{{ url_for('teachers.section_assignments', section_id=section.id) }}">أنشئ الإسنادات أولاً</a>.
+</div>
+{% endif %}
+
+<div class="card" style="overflow-x:auto">
+  <table class="data" style="min-width:700px">
+    <thead>
+      <tr>
+        <th>الحصة / الوقت</th>
+        {% for d in days %}<th>{{ d.name }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in periods %}
+      <tr>
+        <td>
+          <strong>{{ p.name }}</strong>
+          <div class="text-muted" style="font-size:12px">{{ p.start_time.strftime('%H:%M') }} — {{ p.end_time.strftime('%H:%M') }}</div>
+          {% if p.is_break %}<span class="badge muted">استراحة</span>{% endif %}
+        </td>
+        {% for d in days %}
+          {% set slot = grid.get((d.id, p.id)) %}
+          <td style="vertical-align:top;{% if p.is_break %}background:var(--c-surface-2){% endif %}">
+            {% if p.is_break %}
+              <span class="text-muted">—</span>
+            {% else %}
+              {% if slot %}
+                <div style="font-weight:600;color:var(--c-navy)">{{ slot.subject.name }}</div>
+                <div class="text-muted" style="font-size:12px">{{ slot.teacher.full_name }}</div>
+              {% endif %}
+              <details style="margin-top:4px">
+                <summary class="text-orange" style="cursor:pointer;font-size:12px">{% if slot %}تعديل{% else %}+ إضافة{% endif %}</summary>
+                <form action="{{ url_for('schedule.slot_save', section_id=section.id) }}" method="post" style="margin-top:6px">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="day_id" value="{{ d.id }}">
+                  <input type="hidden" name="period_id" value="{{ p.id }}">
+                  <select name="subject_id" required style="width:100%;padding:4px;font-size:12px;margin-bottom:4px">
+                    <option value="">— مادة —</option>
+                    {% for a in assignments %}
+                    {% set seen = [] %}
+                    {% if a.subject_id not in seen %}
+                    <option value="{{ a.subject_id }}" {% if slot and slot.subject_id == a.subject_id %}selected{% endif %}>{{ a.subject.name }}</option>
+                    {% set _ = seen.append(a.subject_id) %}
+                    {% endif %}
+                    {% endfor %}
+                  </select>
+                  <select name="teacher_id" required style="width:100%;padding:4px;font-size:12px;margin-bottom:4px">
+                    <option value="">— معلم —</option>
+                    {% for a in assignments %}
+                    <option value="{{ a.teacher_id }}" {% if slot and slot.teacher_id == a.teacher_id %}selected{% endif %}>{{ a.teacher.full_name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-primary btn-sm" style="width:100%;font-size:12px">حفظ</button>
+                  {% if slot %}
+                  </form>
+                  <form action="{{ url_for('schedule.slot_delete', section_id=section.id, slot_id=slot.id) }}" method="post" style="margin-top:4px" onsubmit="return confirm('حذف؟')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-danger btn-sm" style="width:100%;font-size:12px">حذف</button>
+                  {% endif %}
+                </form>
+              </details>
+            {% endif %}
+          </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

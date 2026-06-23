@@ -1,0 +1,93 @@
+{% extends "partials/base.html" %}
+{% block title %}الترقية الرأسية{% endblock %}
+{% block content %}
+<div class="page-title">
+  <div>
+    <h2>الترقية الرأسية (بناءً على النتيجة)</h2>
+    <div class="sub">
+      اختر السنة المصدر والصف. يُنشأ سجل قيد جديد في السنة الحالية مع الاحتفاظ بالسجل السابق محفوظًا (T-3.4).
+      {% if target_year %}<span class="badge ok">السنة المستقبلة: {{ target_year.name }}</span>{% endif %}
+    </div>
+  </div>
+  <a href="{{ url_for('students.students_list') }}" class="btn btn-ghost">رجوع</a>
+</div>
+
+<form method="get" class="card" style="padding:14px;margin-bottom:16px">
+  <div class="form-row cols-3" style="margin-bottom:0">
+    <div class="field"><label>السنة المصدر</label>
+      <select name="from_year_id">
+        <option value="">—</option>
+        {% for y in years %}
+        <option value="{{ y.id }}" {% if from_year_id == y.id %}selected{% endif %}>{{ y.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>الصف</label>
+      <select name="grade_id">
+        <option value="">—</option>
+        {% for g in grades %}
+        <option value="{{ g.id }}" {% if grade_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="align-self:end"><button class="btn btn-navy" type="submit">عرض المرشحين</button></div>
+  </div>
+</form>
+
+{% if from_year_id and grade_id %}
+  {% if not target_year %}
+    <div class="alert warning">لا توجد سنة نشطة لاستقبال الترقية. أنشئ سنة جديدة وفعّلها.</div>
+  {% elif not next_grade %}
+    <div class="alert warning">لا يوجد صف أعلى لهذا الصف. (يمكنك "الإبقاء في نفس الصف" فقط.)</div>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card">
+      <h3>المرشحون ({{ candidates|length }})</h3>
+      {% if candidates %}
+      <div class="form-row cols-2">
+        <div class="field"><label>الإجراء</label>
+          <select name="action">
+            <option value="promote">ترقية إلى {{ next_grade.name if next_grade else '—' }}</option>
+            <option value="retain">إبقاء في نفس الصف (راسب)</option>
+          </select>
+        </div>
+        <div class="field"><label>الفصل المستهدف (للنجاح)</label>
+          <select name="target_section_id">
+            {% for s in target_sections %}
+            <option value="{{ s.id }}" {% if s.is_full %}disabled{% endif %}>
+              {{ s.name }} — {{ s.current_count }}/{{ s.capacity }}{% if s.is_full %} (ممتلئ){% endif %}
+            </option>
+            {% else %}
+            <option value="">لا توجد فصول في الصف الأعلى</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <table class="data mt-2">
+        <thead><tr>
+          <th><input type="checkbox" onclick="document.querySelectorAll('input[name=enrollment_ids]').forEach(c=>c.checked=this.checked)"></th>
+          <th>الكود</th><th>الاسم</th><th>الفصل الحالي</th>
+        </tr></thead>
+        <tbody>
+          {% for e in candidates %}
+          <tr>
+            <td><input type="checkbox" name="enrollment_ids" value="{{ e.id }}" checked></td>
+            <td><span class="badge muted">{{ e.student.permanent_code }}</span></td>
+            <td><strong>{{ e.student.full_name }}</strong></td>
+            <td>{{ e.section.name }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="mt-2 flex">
+        <button class="btn btn-primary" type="submit">تنفيذ</button>
+      </div>
+      {% else %}
+      <p class="text-muted">لا يوجد طلاب نشطون في {{ grade_id }} لهذه السنة.</p>
+      {% endif %}
+    </div>
+  </form>
+{% endif %}
+{% endblock %}

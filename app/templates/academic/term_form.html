@@ -1,0 +1,38 @@
+{% extends "partials/base.html" %}
+{% block title %}ترم جديد{% endblock %}
+{% block content %}
+<div class="page-title">
+  <div><h2>ترم جديد — السنة {{ year.name }}</h2></div>
+  <a href="{{ url_for('academic.terms_list', year_id=year.id) }}" class="btn btn-ghost">رجوع</a>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card">
+    <div class="form-row cols-2">
+      <div class="field"><label>اسم الترم</label>
+        <input name="name" required placeholder="مثل: الترم الأول">
+      </div>
+      <div class="field"><label>الترتيب</label>
+        <input name="order_index" type="number" min="1" required>
+      </div>
+    </div>
+    <div class="form-row cols-3">
+      <div class="field"><label>تاريخ البداية</label>
+        <input name="start_date" type="date" required>
+      </div>
+      <div class="field"><label>تاريخ النهاية</label>
+        <input name="end_date" type="date" required>
+      </div>
+      <div class="field"><label>الوزن (%)</label>
+        <input name="weight" type="number" step="0.01" min="0" max="100" required>
+        <div class="hint">يدخل في حساب نتيجة السنة</div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-2 flex">
+    <button class="btn btn-primary" type="submit">حفظ</button>
+    <a href="{{ url_for('academic.terms_list', year_id=year.id) }}" class="btn btn-ghost">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

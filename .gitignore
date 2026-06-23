@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+instance/
+*.sqlite
+.DS_Store
+node_modules/
+migrations/versions/*.pyc
+.claude/
+.idea/
+.vscode/
+*.log
+
