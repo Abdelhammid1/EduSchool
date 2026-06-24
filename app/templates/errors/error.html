@@ -11,7 +11,9 @@
 <div class="auth-wrap">
   <div class="auth-card" style="text-align:center">
     <div class="brand">
-      <h1 style="font-size:64px;color:var(--c-orange);margin:0">{{ code }}</h1>
+      <img src="{{ url_for('static', filename='img/logo-emblem.png') }}"
+           alt="" style="width:80px;height:80px;margin:0 auto 12px;display:block">
+      <h1 style="font-size:64px;color:var(--c-gold);margin:0;line-height:1">{{ code }}</h1>
       <div class="accent"></div>
       <h2 style="color:var(--c-navy);margin:18px 0 8px">{{ title }}</h2>
       <p style="color:var(--c-muted);margin:0 0 22px">{{ msg }}</p>

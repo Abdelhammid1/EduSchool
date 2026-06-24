@@ -12,7 +12,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     LOCKOUT_MAX_ATTEMPTS = int(os.environ.get("LOCKOUT_MAX_ATTEMPTS", "5"))
     LOCKOUT_MINUTES = int(os.environ.get("LOCKOUT_MINUTES", "15"))
-    DEFAULT_SCHOOL_NAME = os.environ.get("DEFAULT_SCHOOL_NAME", "مدرسة صالح الشريف")
+    DEFAULT_SCHOOL_NAME = os.environ.get(
+        "DEFAULT_SCHOOL_NAME", "مؤسسة الشيخ صالح الشريف للتعليم القرآني"
+    )
     DEFAULT_SCHOOL_CODE = os.environ.get("DEFAULT_SCHOOL_CODE", "SAS")
     WHATSAPP_PROVIDER = os.environ.get("WHATSAPP_PROVIDER", "stub")
     LANGUAGES = ["ar"]

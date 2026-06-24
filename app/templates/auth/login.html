@@ -11,10 +11,12 @@
 <body>
 <div class="auth-wrap">
   <div class="auth-card">
-    <div class="brand">
-      <h1>منصتي</h1>
+    <div class="brand" style="text-align:center">
+      <img src="{{ url_for('static', filename='img/logo-vertical.png') }}"
+           alt="{{ school_name }}"
+           style="max-width:240px;height:auto;display:block;margin:0 auto 10px">
       <div class="accent"></div>
-      <p>{{ school_name }}</p>
+      <p style="color:var(--c-muted);font-size:13px;margin:10px 0 0">نظام الإدارة الإلكتروني</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
