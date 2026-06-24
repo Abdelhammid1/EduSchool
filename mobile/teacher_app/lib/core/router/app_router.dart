@@ -1,0 +1,56 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
+import '../theme/colors.dart';
+import 'routes.dart';
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final authNotifier = _AuthRouterListenable(ref);
+  ref.onDispose(authNotifier.dispose);
+
+  return GoRouter(
+    initialLocation: Routes.home,
+    refreshListenable: authNotifier,
+    redirect: (context, state) {
+      final auth = ref.read(authControllerProvider);
+      final loc = state.matchedLocation;
+      if (auth is AuthBooting) return null;
+      final loggedIn = auth is Authenticated;
+      if (!loggedIn && loc != Routes.login) return Routes.login;
+      if (loggedIn && loc == Routes.login) return Routes.home;
+      return null;
+    },
+    routes: [
+      GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
+      GoRoute(path: Routes.home, builder: (_, __) => const HomeScreen()),
+    ],
+    errorBuilder: (_, state) => Scaffold(
+      body: Center(
+        child: Text(
+          'مسار غير معروف: ${state.uri}',
+          style: const TextStyle(color: AppColors.danger),
+        ),
+      ),
+    ),
+  );
+});
+
+/// جسر بين Riverpod و GoRouter لإعادة التقييم عند تغيّر حالة المصادقة.
+class _AuthRouterListenable extends ChangeNotifier {
+  _AuthRouterListenable(Ref ref) {
+    _sub = ref.listen<AuthState>(authControllerProvider, (_, __) {
+      notifyListeners();
+    }, fireImmediately: false);
+  }
+  late final ProviderSubscription<AuthState> _sub;
+
+  @override
+  void dispose() {
+    _sub.close();
+    super.dispose();
+  }
+}
