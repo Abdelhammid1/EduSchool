@@ -17,12 +17,19 @@ Response 200:
 {
   "token": "eyJhbGc...",
   "user": {
-    "id": 3, "username": "teacher_ahmed", "full_name": "أحمد المعلم",
+    "id": 3,
+    "school_id": 1,
+    "school_name": "مؤسسة الشيخ صالح الشريف للتعليم القرآني",
+    "username": "teacher_ahmed", "full_name": "أحمد المعلم",
     "role": "teacher", "role_ar": "معلم",
-    "is_teacher": true, "teacher_id": 5, "children_count": 0
+    "is_teacher": true, "teacher_id": 5,
+    "children_count": 0,
+    "children_ids": []
   }
 }
 ```
+For a parent user, `children_ids` is populated so the mobile app can pre-fetch
+each child's data without an extra `/parent/children` roundtrip.
 401 on bad credentials. 400 on missing fields.
 
 ### `GET /api/me`
@@ -41,6 +48,27 @@ Returns teacher's weekly schedule for the active year.
     "start_time": "08:00", "end_time": "08:45",
     "section_id": 4, "section_name": "الصف الأول / أ",
     "subject_id": 2, "subject_name": "الرياضيات" }
+]}
+```
+
+### `GET /api/teacher/terms` *(Sprint 7)*
+Terms in the active academic year.
+```json
+{ "terms": [
+  { "id": 1, "name": "الفصل الأول", "year_id": 1,
+    "start_date": "2025-09-01", "end_date": "2026-01-15" }
+]}
+```
+
+### `GET /api/teacher/section/<section_id>/schedule` *(Sprint 7)*
+Weekly schedule for a specific section (includes every teacher's slot in that section, not just the requester's).
+```json
+{ "slots": [
+  { "day_id": 1, "day_name": "الأحد",
+    "period_id": 1, "period_name": "الحصة الأولى",
+    "start_time": "08:00", "end_time": "08:45",
+    "subject_id": 2, "subject_name": "الرياضيات",
+    "teacher_id": 5, "teacher_name": "أحمد المعلم" }
 ]}
 ```
 
@@ -155,6 +183,9 @@ All invoices for the student across years.
     "status": "partial" }
 ]}
 ```
+
+### `GET /api/parent/child/<student_id>/schedule` *(Sprint 7)*
+Weekly schedule for the child's current section (same shape as `/api/teacher/section/<id>/schedule`).
 
 ### `GET /api/parent/child/<student_id>/materials`
 Materials uploaded by teachers for the child's current section.

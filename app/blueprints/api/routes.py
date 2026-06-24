@@ -12,8 +12,8 @@ from . import bp
 from ...extensions import csrf, db
 from ...models import (
     AcademicYear, Assignment, AssessmentComponent, Attendance, Enrollment,
-    GradeEntry, Invoice, Material, NotificationLog, Payment, Section, Student,
-    Subject, Teacher, Term, User, YearResult,
+    GradeEntry, Invoice, Material, NotificationLog, Payment, ScheduleSlot,
+    School, Section, Student, Subject, Teacher, Term, User, YearResult,
 )
 from ...models.results import RESULT_STATUSES
 from ...services.auth_jwt import issue_token, jwt_required
@@ -72,16 +72,20 @@ def me():
 
 def _user_dict(user: User) -> dict:
     teacher = Teacher.query.filter_by(user_id=user.id).first()
-    children_count = Student.query.filter_by(parent_user_id=user.id).count()
+    children = Student.query.filter_by(parent_user_id=user.id).all()
+    school = School.query.get(user.school_id) if user.school_id else None
     return {
         "id": user.id,
+        "school_id": user.school_id,
+        "school_name": school.name if school else None,
         "username": user.username,
         "full_name": user.full_name,
         "role": user.role.name if user.role else None,
         "role_ar": user.role.name_ar if user.role else None,
         "is_teacher": bool(teacher),
         "teacher_id": teacher.id if teacher else None,
-        "children_count": children_count,
+        "children_count": len(children),
+        "children_ids": [c.id for c in children],
     }
 
 
@@ -98,7 +102,6 @@ def teacher_schedule():
     year = _active_year()
     if not year:
         return jsonify({"slots": []})
-    from ...models import ScheduleSlot
     slots = ScheduleSlot.query.filter_by(
         school_id=_sid(), year_id=year.id, teacher_id=t.id,
     ).all()
@@ -116,6 +119,53 @@ def teacher_schedule():
             } for s in slots
         ]
     })
+
+
+@bp.route("/teacher/terms", methods=["GET"])
+@jwt_required
+def teacher_terms():
+    """List terms in the active academic year."""
+    year = _active_year()
+    if not year:
+        return jsonify({"terms": []})
+    terms = (
+        Term.query.filter_by(school_id=_sid(), year_id=year.id)
+        .order_by(Term.order_index).all()
+    )
+    return jsonify({"terms": [
+        {"id": t.id, "name": t.name, "year_id": t.year_id,
+         "start_date": t.start_date.isoformat() if t.start_date else None,
+         "end_date": t.end_date.isoformat() if t.end_date else None}
+        for t in terms
+    ]})
+
+
+@bp.route("/teacher/section/<int:section_id>/schedule", methods=["GET"])
+@jwt_required
+def teacher_section_schedule(section_id):
+    """Weekly schedule for a specific section (not filtered by teacher)."""
+    t = _teacher_for(_user())
+    if not t:
+        return _err("not a teacher", 403)
+    section = Section.query.filter_by(id=section_id, school_id=_sid()).first()
+    if not section:
+        return _err("section not found", 404)
+    slots = (
+        ScheduleSlot.query.filter_by(
+            school_id=_sid(), year_id=section.year_id, section_id=section.id,
+        )
+        .order_by(ScheduleSlot.day_id, ScheduleSlot.period_id).all()
+    )
+    return jsonify({"slots": [
+        {
+            "day_id": s.day_id, "day_name": s.day.name,
+            "period_id": s.period_id, "period_name": s.period.name,
+            "start_time": s.period.start_time.strftime("%H:%M"),
+            "end_time": s.period.end_time.strftime("%H:%M"),
+            "subject_id": s.subject_id, "subject_name": s.subject.name,
+            "teacher_id": s.teacher_id, "teacher_name": s.teacher.full_name,
+        } for s in slots
+    ]})
 
 
 @bp.route("/teacher/sections", methods=["GET"])
@@ -466,6 +516,40 @@ def parent_notifications():
             "id": n.id, "kind": n.kind, "status": n.status,
             "payload": n.payload, "created_at": n.created_at.isoformat(),
         } for n in notifs
+    ]})
+
+
+@bp.route("/parent/child/<int:student_id>/schedule", methods=["GET"])
+@jwt_required
+def parent_child_schedule(student_id):
+    """Weekly schedule for a child's current section."""
+    s = _check_child(student_id)
+    if not s:
+        return _err("child not found", 404)
+    year = _active_year()
+    if not year:
+        return jsonify({"slots": []})
+    enr = next(
+        (e for e in s.enrollments if e.year_id == year.id and e.status == "active"),
+        None,
+    )
+    if not enr:
+        return jsonify({"slots": []})
+    slots = (
+        ScheduleSlot.query.filter_by(
+            school_id=_sid(), year_id=year.id, section_id=enr.section_id,
+        )
+        .order_by(ScheduleSlot.day_id, ScheduleSlot.period_id).all()
+    )
+    return jsonify({"slots": [
+        {
+            "day_id": s.day_id, "day_name": s.day.name,
+            "period_id": s.period_id, "period_name": s.period.name,
+            "start_time": s.period.start_time.strftime("%H:%M"),
+            "end_time": s.period.end_time.strftime("%H:%M"),
+            "subject_id": s.subject_id, "subject_name": s.subject.name,
+            "teacher_id": s.teacher_id, "teacher_name": s.teacher.full_name,
+        } for s in slots
     ]})
 
 

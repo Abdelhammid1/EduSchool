@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
-import '../../features/home/presentation/home_screen.dart';
+import '../../features/children/presentation/child_detail_screen.dart';
+import '../../features/children/presentation/children_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../theme/colors.dart';
 import 'routes.dart';
 
@@ -26,7 +28,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
-      GoRoute(path: Routes.home, builder: (_, __) => const HomeScreen()),
+      GoRoute(path: Routes.home, builder: (_, __) => const ChildrenScreen()),
+      GoRoute(path: Routes.profile, builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+        path: '/children/:id',
+        builder: (_, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ChildDetailScreen(childId: id);
+        },
+      ),
     ],
     errorBuilder: (_, state) => Scaffold(
       body: Center(
@@ -39,7 +49,6 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// جسر بين Riverpod و GoRouter لإعادة التقييم عند تغيّر حالة المصادقة.
 class _AuthRouterListenable extends ChangeNotifier {
   _AuthRouterListenable(Ref ref) {
     _sub = ref.listen<AuthState>(authControllerProvider, (_, __) {

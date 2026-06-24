@@ -1,10 +1,30 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:manasety_parent/app.dart';
+import 'package:manasety_parent/core/theme/app_theme.dart';
+import 'package:manasety_parent/features/auth/presentation/login_screen.dart';
 
 void main() {
-  testWidgets('App builds without crashing', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ManasetyApp()));
+  testWidgets('Login screen renders Arabic title and login button',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          home: const LoginScreen(),
+        ),
+      ),
+    );
     await tester.pump();
+    expect(find.text('بوابة ولي الأمر'), findsOneWidget);
+    expect(find.text('دخول'), findsOneWidget);
   });
 }
