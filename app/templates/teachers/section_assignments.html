@@ -12,12 +12,19 @@
 <div class="card">
   <h3>الإسنادات الحالية</h3>
   <table class="data">
-    <thead><tr><th>المادة</th><th>المعلم</th><th></th></tr></thead>
+    <thead><tr><th>المادة</th><th>المعلم</th><th>حصص/أسبوع</th><th></th></tr></thead>
     <tbody>
       {% for a in assignments %}
       <tr>
         <td><strong>{{ a.subject.name }}</strong></td>
         <td>{{ a.teacher.full_name }} <span class="badge muted">{{ a.teacher.specialization }}</span></td>
+        <td>
+          <form action="{{ url_for('teachers.assignment_update', assignment_id=a.id) }}" method="post" style="display:flex;gap:6px;align-items:center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input name="weekly_periods" type="number" min="1" max="40" value="{{ a.weekly_periods }}" style="width:70px">
+            <button class="btn btn-ghost btn-sm" type="submit">حفظ</button>
+          </form>
+        </td>
         <td class="actions">
           <form action="{{ url_for('teachers.assignment_remove', assignment_id=a.id) }}" method="post" onsubmit="return confirm('إلغاء الإسناد؟')" style="display:inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -26,7 +33,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="3" class="text-muted" style="text-align:center;padding:18px">لا توجد إسنادات لهذا الفصل.</td></tr>
+      <tr><td colspan="4" class="text-muted" style="text-align:center;padding:18px">لا توجد إسنادات لهذا الفصل.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -41,7 +48,7 @@
   {% else %}
   <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="form-row cols-2">
+    <div class="form-row cols-3">
       <div class="field"><label>المادة</label>
         <select name="subject_id" required>
           {% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
@@ -51,6 +58,10 @@
         <select name="teacher_id" required>
           {% for t in teachers %}<option value="{{ t.id }}">{{ t.full_name }} — {{ t.specialization }}</option>{% endfor %}
         </select>
+      </div>
+      <div class="field"><label>عدد الحصص أسبوعيًا</label>
+        <input name="weekly_periods" type="number" min="1" max="40" value="1" required>
+        <div class="hint">مثال: عربي 8، إنجليزي 4، تربية فنية 1</div>
       </div>
     </div>
     <div class="mt-2 flex">

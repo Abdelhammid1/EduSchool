@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, time
 
 from flask import abort, flash, jsonify, redirect, render_template, request, url_for
@@ -209,6 +210,131 @@ def slot_delete(section_id, slot_id):
         db.session.commit()
         flash("تم حذف الحصة.", "success")
     return redirect(url_for("schedule.section_schedule", section_id=section.id))
+
+
+# ---------- T-5.5 Auto-schedule generator (Sprint 8, Ticket 1) ----------
+
+def _auto_generate(year):
+    """Greedy backtracking scheduler.
+
+    Places `weekly_periods` slots for each active Assignment such that:
+      1. no (section, day, period) is double-booked, and
+      2. no (teacher, day, period) is double-booked.
+
+    Returns (ok: bool, message: str, placements_count: int).
+    On success the DB is updated (existing slots for the year are deleted first).
+    """
+    sid = year.school_id
+    days = (
+        Day.query.filter_by(school_id=sid, is_active=True)
+        .order_by(Day.order_index).all()
+    )
+    periods = (
+        Period.query.filter_by(school_id=sid, is_break=False)
+        .order_by(Period.order_index).all()
+    )
+    if not days or not periods:
+        return False, "لا توجد أيام أو حصص معرّفة. أضفها من إعدادات الجدول أولًا.", 0
+
+    assignments = Assignment.query.filter_by(
+        school_id=sid, year_id=year.id, is_active=True
+    ).all()
+    if not assignments:
+        return False, "لا يوجد إسنادات نشطة لتوليد جدول منها.", 0
+
+    total_cells = len(days) * len(periods)
+
+    # Aggregate load per section / teacher for feasibility + heuristic
+    section_load = defaultdict(int)
+    teacher_load = defaultdict(int)
+    for a in assignments:
+        section_load[a.section_id] += a.weekly_periods
+        teacher_load[a.teacher_id] += a.weekly_periods
+
+    for section_id, load in section_load.items():
+        if load > total_cells:
+            s = Section.query.get(section_id)
+            return (
+                False,
+                f"الفصل ({s.grade.name} / {s.name}) يحتاج {load} حصة أسبوعيًا "
+                f"لكن الجدول يوفّر {total_cells} خانة فقط. راجع عدد الحصص أو الإسنادات.",
+                0,
+            )
+    for teacher_id, load in teacher_load.items():
+        if load > total_cells:
+            t = Teacher.query.get(teacher_id)
+            return (
+                False,
+                f"المعلم ({t.full_name}) عليه {load} حصة أسبوعيًا "
+                f"لكن الجدول يوفّر {total_cells} خانة فقط.",
+                0,
+            )
+
+    # Expand assignments into individual placements
+    placements = []
+    for a in assignments:
+        placements.extend([a] * a.weekly_periods)
+
+    # Most-constrained-first heuristic:
+    #  teachers with the highest load are hardest to place → do them first.
+    placements.sort(key=lambda a: (-teacher_load[a.teacher_id], -section_load[a.section_id]))
+
+    cells = [(d.id, p.id) for d in days for p in periods]
+
+    used_section = defaultdict(set)
+    used_teacher = defaultdict(set)
+    result = []
+
+    def backtrack(idx):
+        if idx >= len(placements):
+            return True
+        a = placements[idx]
+        for cell in cells:
+            if cell in used_section[a.section_id]:
+                continue
+            if cell in used_teacher[a.teacher_id]:
+                continue
+            used_section[a.section_id].add(cell)
+            used_teacher[a.teacher_id].add(cell)
+            result.append((a, cell[0], cell[1]))
+            if backtrack(idx + 1):
+                return True
+            result.pop()
+            used_section[a.section_id].discard(cell)
+            used_teacher[a.teacher_id].discard(cell)
+        return False
+
+    if not backtrack(0):
+        return (
+            False,
+            "تعذّر توليد جدول متكامل بدون تعارض. جرّب تقليل عدد الحصص "
+            "أو أضف أيامًا/حصصًا في إعدادات الجدول.",
+            0,
+        )
+
+    # Replace existing slots for this year
+    ScheduleSlot.query.filter_by(school_id=sid, year_id=year.id).delete()
+    for a, day_id, period_id in result:
+        db.session.add(ScheduleSlot(
+            school_id=sid, year_id=year.id, section_id=a.section_id,
+            day_id=day_id, period_id=period_id,
+            subject_id=a.subject_id, teacher_id=a.teacher_id,
+        ))
+    db.session.commit()
+    return True, f"تم توليد {len(result)} حصة. يمكنك تعديل أي حصة يدويًا الآن.", len(result)
+
+
+@bp.route("/auto_generate", methods=["POST"])
+@login_required
+@require_permission("schedule", "edit")
+def auto_generate():
+    year = _active_year()
+    if not year:
+        flash("لا توجد سنة دراسية نشطة.", "danger")
+        return redirect(url_for("schedule.index"))
+    ok, msg, _ = _auto_generate(year)
+    flash(msg, "success" if ok else "danger")
+    return redirect(url_for("schedule.index"))
 
 
 # ---------- T-5.4 Teacher schedule view ----------

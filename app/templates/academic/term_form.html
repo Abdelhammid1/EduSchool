@@ -1,8 +1,8 @@
 {% extends "partials/base.html" %}
-{% block title %}ترم جديد{% endblock %}
+{% block title %}فترة دراسية جديدة{% endblock %}
 {% block content %}
 <div class="page-title">
-  <div><h2>ترم جديد — السنة {{ year.name }}</h2></div>
+  <div><h2>فترة دراسية جديدة — السنة {{ year.name }}</h2></div>
   <a href="{{ url_for('academic.terms_list', year_id=year.id) }}" class="btn btn-ghost">رجوع</a>
 </div>
 
@@ -10,8 +10,8 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="card">
     <div class="form-row cols-2">
-      <div class="field"><label>اسم الترم</label>
-        <input name="name" required placeholder="مثل: الترم الأول">
+      <div class="field"><label>اسم الفترة</label>
+        <input name="name" required placeholder="مثل: الفترة الدراسية الأولى">
       </div>
       <div class="field"><label>الترتيب</label>
         <input name="order_index" type="number" min="1" required>

@@ -4,7 +4,7 @@
 <div class="page-title">
   <div>
     <h2>رصد درجات الطلاب</h2>
-    <div class="sub">اختر الفصل، الترم، والمادة لرصد الدرجات (T-7.3 / T-7.4)</div>
+    <div class="sub">اختر الفصل، الفترة الدراسية، والمادة لرصد الدرجات (T-7.3 / T-7.4)</div>
   </div>
 </div>
 
@@ -16,7 +16,7 @@
         {% for s in sections %}<option value="{{ s.id }}">{{ s.grade.name }} / {{ s.name }}</option>{% endfor %}
       </select>
     </div>
-    <div class="field"><label>الترم</label>
+    <div class="field"><label>الفترة الدراسية</label>
       <select name="term_id" required>
         <option value="">—</option>
         {% for t in terms %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}

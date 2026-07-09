@@ -1,15 +1,15 @@
 {% extends "partials/base.html" %}
-{% block title %}ترمات {{ year.name }}{% endblock %}
+{% block title %}الفترات الدراسية لسنة {{ year.name }}{% endblock %}
 {% block content %}
 <div class="page-title">
   <div>
-    <h2>ترمات السنة {{ year.name }}</h2>
-    <div class="sub">عدد مرن (ترمان، ثلاثة، أو أكثر) ومجموع الأوزان = 100% (T-2.2)</div>
+    <h2>الفترات الدراسية لسنة {{ year.name }}</h2>
+    <div class="sub">عدد مرن (فترتان، ثلاث، أو أكثر) ومجموع الأوزان = 100% (T-2.2)</div>
   </div>
   <div class="flex">
     <a href="{{ url_for('academic.years_list') }}" class="btn btn-ghost">رجوع</a>
     {% if year.status == 'active' %}
-    <a href="{{ url_for('academic.term_new', year_id=year.id) }}" class="btn btn-primary">+ ترم</a>
+    <a href="{{ url_for('academic.term_new', year_id=year.id) }}" class="btn btn-primary">+ فترة دراسية</a>
     {% endif %}
   </div>
 </div>
@@ -37,7 +37,7 @@
       <td>{{ t.weight }}%</td>
       <td class="actions">
         {% if year.status == 'active' %}
-        <form action="{{ url_for('academic.term_delete', term_id=t.id) }}" method="post" onsubmit="return confirm('حذف الترم؟')" style="display:inline">
+        <form action="{{ url_for('academic.term_delete', term_id=t.id) }}" method="post" onsubmit="return confirm('حذف الفترة الدراسية؟')" style="display:inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-danger btn-sm" type="submit">حذف</button>
         </form>
@@ -45,7 +45,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px">لا توجد ترمات. أضف الترم الأول.</td></tr>
+    <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px">لا توجد فترات دراسية. أضف الفترة الأولى.</td></tr>
     {% endfor %}
   </tbody>
 </table>

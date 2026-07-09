@@ -6,7 +6,7 @@
     <h2>ورقة الرصد — {{ subject.name }}</h2>
     <div class="sub">
       الفصل: <strong class="text-navy">{{ section.grade.name }} / {{ section.name }}</strong>
-      • الترم: <strong class="text-navy">{{ term.name }}</strong>
+      • الفترة الدراسية: <strong class="text-navy">{{ term.name }}</strong>
       {% if locked %}<span class="badge danger">معتمدة — للقراءة فقط</span>{% endif %}
     </div>
   </div>
@@ -15,7 +15,7 @@
 
 {% if not components %}
 <div class="alert info">
-  لم تُعرّف مكوّنات تقييم لهذه المادة في هذا الترم.
+  لم تُعرّف مكوّنات تقييم لهذه المادة في هذه الفترة الدراسية.
   <a href="{{ url_for('results.components', term_id=term.id, subject_id=subject.id) }}">تعريف المكوّنات</a>.
 </div>
 {% else %}

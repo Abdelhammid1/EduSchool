@@ -53,6 +53,7 @@ class Assignment(db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
     teacher_id = db.Column(db.Integer, db.ForeignKey("teachers.id"), nullable=False, index=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    weekly_periods = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     section = db.relationship("Section", backref="assignments")

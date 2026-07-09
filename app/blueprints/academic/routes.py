@@ -86,7 +86,7 @@ def terms_list(year_id):
 def term_new(year_id):
     year = _get(AcademicYear, year_id)
     if year.status == "closed":
-        flash("السنة مغلقة، لا يمكن تعديل الترمات.", "danger")
+        flash("السنة مغلقة، لا يمكن تعديل الفترات الدراسية.", "danger")
         return redirect(url_for("academic.terms_list", year_id=year_id))
     if request.method == "POST":
         term = Term(
@@ -103,9 +103,9 @@ def term_new(year_id):
 
         total = db.session.query(func.coalesce(func.sum(Term.weight), 0)).filter_by(year_id=year.id).scalar()
         if Decimal(total) != Decimal(100):
-            flash(f"تنبيه: مجموع أوزان الترمات = {total}% (يفترض 100%).", "warning")
+            flash(f"تنبيه: مجموع أوزان الفترات الدراسية = {total}% (يفترض 100%).", "warning")
         else:
-            flash("تم إضافة الترم. مجموع الأوزان = 100%.", "success")
+            flash("تم إضافة الفترة الدراسية. مجموع الأوزان = 100%.", "success")
         return redirect(url_for("academic.terms_list", year_id=year.id))
     return render_template("academic/term_form.html", year=year, term=None)
 
@@ -118,7 +118,7 @@ def term_delete(term_id):
     year_id = term.year_id
     db.session.delete(term)
     db.session.commit()
-    flash("تم حذف الترم.", "success")
+    flash("تم حذف الفترة الدراسية.", "success")
     return redirect(url_for("academic.terms_list", year_id=year_id))
 
 

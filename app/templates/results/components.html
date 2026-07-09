@@ -4,13 +4,13 @@
 <div class="page-title">
   <div>
     <h2>مكوّنات التقييم</h2>
-    <div class="sub">تعريف مكوّنات تقييم كل مادة في الترم (T-7.2). مجموع الحد الأقصى يجب أن يساوي 100.</div>
+    <div class="sub">تعريف مكوّنات تقييم كل مادة في الفترة الدراسية (T-7.2). مجموع الحد الأقصى يجب أن يساوي 100.</div>
   </div>
 </div>
 
 <form method="get" class="card" style="padding:14px;margin-bottom:16px">
   <div class="form-row cols-3" style="margin-bottom:0">
-    <div class="field"><label>الترم</label>
+    <div class="field"><label>الفترة الدراسية</label>
       <select name="term_id">
         <option value="">—</option>
         {% for t in terms %}<option value="{{ t.id }}" {% if term_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
@@ -63,7 +63,7 @@
     <input type="hidden" name="action" value="add">
     <div class="form-row cols-3">
       <div class="field"><label>اسم المكوّن</label>
-        <input name="name" required placeholder="أعمال سنة / نهاية الترم ...">
+        <input name="name" required placeholder="أعمال سنة / نهاية الفترة ...">
       </div>
       <div class="field"><label>الحد الأقصى</label>
         <input name="max_score" type="number" step="0.01" min="0" max="100" required>

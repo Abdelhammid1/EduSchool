@@ -68,6 +68,19 @@
     </div>
   </div>
 
+  <div class="card mt-2">
+    <h3>بيانات الأم <span class="badge muted" style="font-size:11px;margin-right:8px">اختياري</span></h3>
+    <div class="hint" style="margin-bottom:10px">تُستخدم للتفريق بين الأبناء في الحالات التي يحمل فيها أبناء الأب نفسه أسماء متطابقة.</div>
+    <div class="form-row cols-2">
+      <div class="field"><label>اسم الأم</label>
+        <input name="mother_name" value="{{ student.mother_name or '' if student else f.get('mother_name','') }}">
+      </div>
+      <div class="field"><label>هاتف الأم (واتساب)</label>
+        <input name="mother_phone" value="{{ student.mother_phone or '' if student else f.get('mother_phone','') }}">
+      </div>
+    </div>
+  </div>
+
   <div class="mt-2 flex">
     <button class="btn btn-primary" type="submit">
       {% if dup %}تأكيد الحفظ رغم تكرار رقم الهوية{% else %}حفظ{% endif %}

@@ -209,6 +209,7 @@ def section_assignments(section_id):
     if request.method == "POST":
         subject_id = int(request.form["subject_id"])
         teacher_id = int(request.form["teacher_id"])
+        weekly_periods = max(1, int(request.form.get("weekly_periods") or 1))
         confirmed = request.form.get("confirm_coteach") == "1"
 
         existing = Assignment.query.filter_by(
@@ -230,12 +231,14 @@ def section_assignments(section_id):
             return render_template(
                 "teachers/assignment_confirm.html",
                 section=section, subject_id=subject_id, teacher_id=teacher_id,
+                weekly_periods=weekly_periods,
                 teachers=teachers, subjects=subjects, others=others,
             )
 
         a = Assignment(
             school_id=_sid(), year_id=year.id, section_id=section.id,
             subject_id=subject_id, teacher_id=teacher_id,
+            weekly_periods=weekly_periods,
         )
         db.session.add(a)
         db.session.commit()
@@ -266,6 +269,17 @@ def assignment_remove(assignment_id):
     db.session.commit()
     flash("تم إلغاء الإسناد.", "success")
     return redirect(url_for("teachers.section_assignments", section_id=section_id))
+
+
+@bp.route("/assignments/<int:assignment_id>/update", methods=["POST"])
+@login_required
+@require_permission("teachers", "edit")
+def assignment_update(assignment_id):
+    a = _get(Assignment, assignment_id)
+    a.weekly_periods = max(1, int(request.form.get("weekly_periods") or 1))
+    db.session.commit()
+    flash("تم تحديث عدد الحصص الأسبوعية.", "success")
+    return redirect(url_for("teachers.section_assignments", section_id=a.section_id))
 
 
 def _parse_date(s):

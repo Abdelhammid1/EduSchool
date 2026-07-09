@@ -84,6 +84,8 @@ def student_new():
             parent_phone=(request.form.get("parent_phone") or "").strip() or None,
             parent_email=(request.form.get("parent_email") or "").strip() or None,
             parent_user_id=int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None,
+            mother_name=(request.form.get("mother_name") or "").strip() or None,
+            mother_phone=(request.form.get("mother_phone") or "").strip() or None,
             address=(request.form.get("address") or "").strip() or None,
             notes=(request.form.get("notes") or "").strip() or None,
         )
@@ -126,6 +128,8 @@ def student_edit(student_id):
         student.parent_phone = (request.form.get("parent_phone") or "").strip() or None
         student.parent_email = (request.form.get("parent_email") or "").strip() or None
         student.parent_user_id = int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None
+        student.mother_name = (request.form.get("mother_name") or "").strip() or None
+        student.mother_phone = (request.form.get("mother_phone") or "").strip() or None
         student.address = (request.form.get("address") or "").strip() or None
         student.notes = (request.form.get("notes") or "").strip() or None
         db.session.commit()
