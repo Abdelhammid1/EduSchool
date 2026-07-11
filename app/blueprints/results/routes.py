@@ -303,11 +303,22 @@ def section_results(section_id):
     rule = _rule_for(year.id)
     terms = Term.query.filter_by(school_id=_sid(), year_id=year.id).order_by(Term.order_index).all()
 
-    enrollments = (
-        Enrollment.query.filter_by(
-            school_id=_sid(), year_id=year.id, section_id=section.id, status="active",
-        ).join(Student).order_by(Student.full_name).all()
-    )
+    # Sprint 9 TC-7.1.2 (part 2): for CLOSED years, include promoted_out
+    # enrollments so historical results remain visible after year archival.
+    enroll_filter = {
+        "school_id": _sid(), "year_id": year.id, "section_id": section.id,
+    }
+    if year.status == "closed":
+        enrollments = (
+            Enrollment.query.filter_by(**enroll_filter)
+            .filter(Enrollment.status.in_(["active", "promoted_out"]))
+            .join(Student).order_by(Student.full_name).all()
+        )
+    else:
+        enrollments = (
+            Enrollment.query.filter_by(**enroll_filter, status="active")
+            .join(Student).order_by(Student.full_name).all()
+        )
 
     subjects = _subjects_for_grade(section.grade_id)
 
