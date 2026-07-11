@@ -23,10 +23,14 @@
     <div class="field">
       <label>الحالة</label>
       <select name="status">
-        <option value="active">نشطة (الحالية)</option>
-        <option value="closed">مغلقة</option>
+        <option value="active">نشطة (السنة الجارية للعمل اليومي)</option>
+        <option value="closed">مغلقة (أرشيف للقراءة فقط)</option>
       </select>
-      <div class="hint">لا يمكن تفعيل أكثر من سنة في وقت واحد. أغلق السابقة قبل تفعيل الجديدة.</div>
+      <div class="hint" style="margin-top:6px;line-height:1.7">
+        <strong>نشطة</strong> = السنة الجارية التي يتم فيها العمل اليومي (تسجيل الحضور، رصد الدرجات، إصدار الفواتير).<br>
+        <strong>مغلقة</strong> = أرشيف — لا يمكن تعديل بياناتها التشغيلية. تُغلق تلقائيًا بعد اعتماد نتائج نهاية العام وإجراء الترقية.<br>
+        <span style="color:var(--c-danger)">⚠️ لا يمكن تفعيل أكثر من سنة في وقت واحد.</span>
+      </div>
     </div>
   </div>
   <div class="mt-2 flex">

@@ -8,6 +8,9 @@ instance/
 *.sqlite
 .DS_Store
 node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
 migrations/versions/*.pyc
 .claude/
 .idea/

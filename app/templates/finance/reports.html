@@ -3,6 +3,15 @@
 {% block content %}
 <div class="page-title">
   <div><h2>التقارير المالية</h2><div class="sub">عرض مبسّط لغير المختصّين (T-9.2)</div></div>
+  <div class="flex" style="gap:8px">
+    <a class="btn btn-primary" href="{{ url_for('finance.reports_export', format='pdf', start=start, end=end) }}">
+      📄 تصدير PDF
+    </a>
+    <a class="btn btn-ghost" style="border:1px solid var(--c-gold);color:var(--c-gold-dark)"
+       href="{{ url_for('finance.reports_export', format='excel', start=start, end=end) }}">
+      📊 تصدير Excel
+    </a>
+  </div>
 </div>
 
 <form method="get" class="card" style="padding:14px;margin-bottom:16px">

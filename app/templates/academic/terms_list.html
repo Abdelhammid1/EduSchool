@@ -37,6 +37,7 @@
       <td>{{ t.weight }}%</td>
       <td class="actions">
         {% if year.status == 'active' %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('academic.term_edit', term_id=t.id) }}">تعديل</a>
         <form action="{{ url_for('academic.term_delete', term_id=t.id) }}" method="post" onsubmit="return confirm('حذف الفترة الدراسية؟')" style="display:inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-danger btn-sm" type="submit">حذف</button>

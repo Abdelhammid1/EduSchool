@@ -7,14 +7,14 @@
 </div>
 
 <table class="data">
-  <thead><tr><th>الترتيب</th><th>الاسم</th><th>المرحلة</th><th>عدد الفصول (السنة الحالية)</th><th></th></tr></thead>
+  <thead><tr><th>الترتيب</th><th>الاسم</th><th>المرحلة</th><th>عدد الفصول {% if active_year %}({{ active_year.name }}){% else %}(لا توجد سنة نشطة){% endif %}</th><th></th></tr></thead>
   <tbody>
     {% for g in grades %}
     <tr>
       <td>{{ g.order_index }}</td>
       <td><strong>{{ g.name }}</strong></td>
       <td>{{ g.stage or '—' }}</td>
-      <td>{{ g.sections|length }}</td>
+      <td>{{ section_counts.get(g.id, 0) }}</td>
       <td class="actions">
         <a class="btn btn-ghost btn-sm" href="{{ url_for('academic.grade_edit', grade_id=g.id) }}">تعديل</a>
       </td>

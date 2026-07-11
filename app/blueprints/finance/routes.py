@@ -1,7 +1,10 @@
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from io import BytesIO
 
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import (
+    abort, current_app, flash, redirect, render_template, request, Response, url_for,
+)
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
@@ -277,6 +280,31 @@ def invoice_detail(invoice_id):
     return render_template("finance/invoice_detail.html", inv=inv, cash_accounts=cash_accounts)
 
 
+@bp.route("/invoices/<int:invoice_id>/print")
+@login_required
+@require_permission("finance", "view")
+def invoice_print(invoice_id):
+    """Sprint 9 TC-8.3.1 — print-optimized invoice view.
+
+    ?download=1 pipes through WeasyPrint to return a PDF.
+    Default: renders HTML with @media print styles + auto window.print().
+    """
+    inv = _get(Invoice, invoice_id)
+    download = request.args.get("download") == "1"
+    if download:
+        from weasyprint import HTML
+        html = render_template("finance/invoice_print.html", inv=inv, download=True)
+        pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="invoice_{inv.number}.pdf"',
+            },
+        )
+    return render_template("finance/invoice_print.html", inv=inv, download=False)
+
+
 @bp.route("/invoices/<int:invoice_id>/pay", methods=["POST"])
 @login_required
 @require_permission("finance", "edit")
@@ -496,13 +524,8 @@ def expense_new():
 
 # ---------- T-9.2 Reports ----------
 
-@bp.route("/reports")
-@login_required
-@require_permission("finance", "view")
-def reports():
-    end = _parse_date(request.args.get("end")) or date.today()
-    start = _parse_date(request.args.get("start")) or (end - timedelta(days=365))
-
+def _report_data(start, end):
+    """Sprint 9 TC-9.2.2 — shared computation for HTML view + PDF/Excel export."""
     sums = (
         db.session.query(
             Account.type, Account.id, Account.code, Account.name,
@@ -529,9 +552,115 @@ def reports():
         totals[t] = totals.get(t, 0.0) + b
 
     net_income = totals["revenue"] - totals["expense"]
+    return grouped, totals, net_income
+
+
+@bp.route("/reports")
+@login_required
+@require_permission("finance", "view")
+def reports():
+    end = _parse_date(request.args.get("end")) or date.today()
+    start = _parse_date(request.args.get("start")) or (end - timedelta(days=365))
+    grouped, totals, net_income = _report_data(start, end)
     return render_template(
         "finance/reports.html",
         start=start, end=end, grouped=grouped, totals=totals, net_income=net_income,
+    )
+
+
+@bp.route("/reports/export")
+@login_required
+@require_permission("finance", "view")
+def reports_export():
+    """Sprint 9 TC-9.2.2 — export the financial report as PDF or Excel."""
+    fmt = (request.args.get("format") or "pdf").lower()
+    end = _parse_date(request.args.get("end")) or date.today()
+    start = _parse_date(request.args.get("start")) or (end - timedelta(days=365))
+    grouped, totals, net_income = _report_data(start, end)
+
+    label_ar = {
+        "asset": "الأصول", "liability": "الالتزامات", "equity": "حقوق الملكية",
+        "revenue": "الإيرادات", "expense": "المصروفات",
+    }
+
+    if fmt == "excel":
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "التقرير المالي"
+        ws.sheet_view.rightToLeft = True
+
+        bold_navy = Font(bold=True, color="FFFFFF")
+        navy_fill = PatternFill("solid", fgColor="001556")
+        gold_fill = PatternFill("solid", fgColor="D4AF37")
+        header_font = Font(bold=True, size=13, color="001556")
+
+        ws["A1"] = "التقرير المالي"
+        ws["A1"].font = Font(bold=True, size=16, color="001556")
+        ws.merge_cells("A1:D1")
+        ws["A2"] = f"من {start.isoformat()} إلى {end.isoformat()}"
+        ws["A2"].alignment = Alignment(horizontal="right")
+
+        r = 4
+        for section_key in ("asset", "liability", "equity", "revenue", "expense"):
+            ws.cell(row=r, column=1, value=label_ar[section_key]).font = header_font
+            r += 1
+            headers = ["الرمز", "الاسم", "الرصيد"]
+            for c, h in enumerate(headers, start=1):
+                cell = ws.cell(row=r, column=c, value=h)
+                cell.font = bold_navy
+                cell.fill = navy_fill
+                cell.alignment = Alignment(horizontal="center")
+            r += 1
+            for entry in grouped[section_key]:
+                ws.cell(row=r, column=1, value=entry["code"])
+                ws.cell(row=r, column=2, value=entry["name"])
+                ws.cell(row=r, column=3, value=round(entry["balance"], 2))
+                r += 1
+            tot_cell = ws.cell(row=r, column=2, value="الإجمالي")
+            tot_cell.font = Font(bold=True)
+            total_val_cell = ws.cell(row=r, column=3, value=round(totals[section_key], 2))
+            total_val_cell.font = Font(bold=True)
+            total_val_cell.fill = gold_fill
+            r += 2
+
+        ws.cell(row=r, column=1, value="صافي الدخل").font = header_font
+        ws.cell(row=r, column=3, value=round(net_income, 2)).font = Font(bold=True, size=14)
+        ws.column_dimensions["A"].width = 15
+        ws.column_dimensions["B"].width = 35
+        ws.column_dimensions["C"].width = 18
+
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return Response(
+            buf.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="financial_report_{start}_{end}.xlsx"'
+                ),
+            },
+        )
+
+    # Default: PDF via WeasyPrint (renders the print-optimized template)
+    from weasyprint import HTML
+    html = render_template(
+        "finance/reports_pdf.html",
+        start=start, end=end,
+        grouped=grouped, totals=totals, net_income=net_income,
+        label_ar=label_ar,
+    )
+    pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="financial_report_{start}_{end}.pdf"'
+            ),
+        },
     )
 
 

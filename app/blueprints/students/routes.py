@@ -8,8 +8,8 @@ from . import bp
 from ..utils import require_permission
 from ...extensions import db
 from ...models import (
-    AcademicYear, Grade, Section, School, Student, Enrollment, TransferLog, User,
-    YearResult,
+    AcademicYear, Grade, Invoice, Payment, Section, School, Student,
+    Enrollment, TransferLog, User, YearResult,
 )
 
 
@@ -45,8 +45,19 @@ def _get(model, oid):
 @require_permission("students", "view")
 def students_list():
     q = (request.args.get("q") or "").strip()
+    section_id = request.args.get("section_id", type=int)
     year = _active_year()
     query = Student.query.filter_by(school_id=_sid())
+
+    section_ctx = None
+    if section_id:
+        # Sprint 9 Improvement F.1 — link from a section directly to its students.
+        section_ctx = _get(Section, section_id)
+        query = query.join(Enrollment).filter(
+            Enrollment.section_id == section_id,
+            Enrollment.status == "active",
+        )
+
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -54,7 +65,8 @@ def students_list():
         )
     students = query.order_by(Student.full_name).limit(500).all()
     return render_template(
-        "students/list.html", students=students, q=q, active_year=year
+        "students/list.html", students=students, q=q,
+        active_year=year, section_ctx=section_ctx,
     )
 
 
@@ -107,11 +119,25 @@ def student_detail(student_id):
         e.year_id == (year.id if year else None) and e.status == "active"
         for e in student.enrollments
     )
+    # Sprint 9 Improvement F.2 — surface all fees/payments in one place.
+    eids = [e.id for e in student.enrollments]
+    invoices = []
+    fin_totals = {"invoiced": 0.0, "paid": 0.0, "remaining": 0.0}
+    if eids:
+        invoices = (
+            Invoice.query.filter(Invoice.enrollment_id.in_(eids))
+            .order_by(Invoice.issue_date.desc()).all()
+        )
+        for inv in invoices:
+            fin_totals["invoiced"] += float(inv.total_amount)
+            fin_totals["paid"] += float(inv.paid_amount)
+            fin_totals["remaining"] += float(inv.remaining)
     return render_template(
         "students/detail.html",
         student=student,
         active_year=year,
         has_active_enrollment=has_active_enrollment,
+        invoices=invoices, fin_totals=fin_totals,
     )
 
 

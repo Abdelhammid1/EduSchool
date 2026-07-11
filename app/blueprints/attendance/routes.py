@@ -8,8 +8,8 @@ from . import bp
 from ..utils import require_permission
 from ...extensions import db
 from ...models import (
-    AcademicYear, Attendance, Enrollment, Grade, NotificationLog,
-    Section, Student,
+    AcademicYear, Assignment, Attendance, Enrollment, Grade, NotificationLog,
+    Section, Student, Teacher,
 )
 from ...services.notifications import send_notification
 
@@ -29,6 +29,21 @@ def _get(model, oid):
     return obj
 
 
+def _teacher_for_current_user():
+    """Return the Teacher row for the logged-in user, or None if they aren't
+    a teacher (admins, staff without a Teacher profile)."""
+    return Teacher.query.filter_by(school_id=_sid(), user_id=current_user.id).first()
+
+
+def _teacher_can_touch_section(teacher, section):
+    """Sprint 9 (TC-6.1.3): check the teacher has an active Assignment covering
+    the target section in that section's year."""
+    return Assignment.query.filter_by(
+        teacher_id=teacher.id, section_id=section.id,
+        year_id=section.year_id, is_active=True,
+    ).first() is not None
+
+
 # ---------- T-6.1 / T-6.2 Daily marking + notifications ----------
 
 @bp.route("")
@@ -38,10 +53,25 @@ def index():
     year = _active_year()
     sections = []
     if year:
-        sections = (
+        q = (
             Section.query.filter_by(school_id=_sid(), year_id=year.id)
-            .join(Grade).order_by(Grade.order_index, Section.name).all()
+            .join(Grade)
         )
+        # Sprint 9 TC-6.1.3: teachers only see sections they're assigned to.
+        teacher = _teacher_for_current_user()
+        if teacher:
+            assigned_ids = {
+                a.section_id for a in Assignment.query.filter_by(
+                    teacher_id=teacher.id, year_id=year.id, is_active=True,
+                ).all()
+            }
+            if not assigned_ids:
+                sections = []
+            else:
+                q = q.filter(Section.id.in_(assigned_ids))
+                sections = q.order_by(Grade.order_index, Section.name).all()
+        else:
+            sections = q.order_by(Grade.order_index, Section.name).all()
     return render_template("attendance/index.html", year=year, sections=sections)
 
 
@@ -50,6 +80,16 @@ def index():
 @require_permission("attendance", "edit")
 def mark(section_id):
     section = _get(Section, section_id)
+
+    # Sprint 9 TC-6.1.3: teacher can only mark attendance for their assigned sections.
+    teacher = _teacher_for_current_user()
+    if teacher and not _teacher_can_touch_section(teacher, section):
+        flash(
+            "لا تملك صلاحية تسجيل الحضور لهذا الفصل — يمكنك تسجيل الحضور فقط للفصول المسندة إليك.",
+            "danger",
+        )
+        return redirect(url_for("attendance.index"))
+
     year = section.year
     on_date = _parse_date(request.values.get("date")) or date.today()
 

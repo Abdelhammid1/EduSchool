@@ -10,7 +10,12 @@
       • {{ inv.enrollment.year.name }}
     </div>
   </div>
-  <a href="{{ url_for('finance.invoices_list') }}" class="btn btn-ghost">رجوع</a>
+  <div class="flex" style="gap:8px">
+    <a href="{{ url_for('finance.invoice_print', invoice_id=inv.id) }}" target="_blank" class="btn btn-primary">
+      🖨️ طباعة / PDF
+    </a>
+    <a href="{{ url_for('finance.invoices_list') }}" class="btn btn-ghost">رجوع</a>
+  </div>
 </div>
 
 <div class="grid grid-4">

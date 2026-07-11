@@ -54,6 +54,46 @@
 </div>
 {% endif %}
 
+{# Sprint 9 Improvement F.2 — student's full financial picture in one card #}
+{% if invoices %}
+<div class="card mt-2" style="border-top:3px solid var(--c-gold)">
+  <h3>الوضع المالي</h3>
+  <div class="grid grid-3" style="gap:10px;margin-bottom:12px">
+    <div class="stat navy"><div><div class="label">إجمالي الفواتير</div><div class="value">{{ "%.2f"|format(fin_totals.invoiced) }}</div></div><div class="icon">∑</div></div>
+    <div class="stat green"><div><div class="label">المدفوع</div><div class="value">{{ "%.2f"|format(fin_totals.paid) }}</div></div><div class="icon">✓</div></div>
+    <div class="stat red"><div><div class="label">المتبقّي</div><div class="value">{{ "%.2f"|format(fin_totals.remaining) }}</div></div><div class="icon">!</div></div>
+  </div>
+  <table class="data">
+    <thead><tr>
+      <th>رقم الفاتورة</th><th>السنة</th><th>الإصدار</th><th>الاستحقاق</th>
+      <th>الإجمالي</th><th>المدفوع</th><th>المتبقّي</th><th>الحالة</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td><strong>{{ inv.number }}</strong></td>
+        <td>{{ inv.enrollment.year.name }}</td>
+        <td>{{ inv.issue_date }}</td>
+        <td>{{ inv.due_date }}</td>
+        <td>{{ "%.2f"|format(inv.total_amount) }}</td>
+        <td class="text-green">{{ "%.2f"|format(inv.paid_amount) }}</td>
+        <td class="{% if inv.remaining > 0 %}text-red{% endif %}">{{ "%.2f"|format(inv.remaining) }}</td>
+        <td>
+          {% if inv.status == 'paid' %}<span class="badge ok">مدفوعة</span>
+          {% elif inv.status == 'partial' %}<span class="badge warn">جزئي</span>
+          {% elif inv.status == 'overdue' %}<span class="badge danger">متأخّرة</span>
+          {% else %}<span class="badge muted">معلّقة</span>{% endif %}
+        </td>
+        <td>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('finance.invoice_detail', invoice_id=inv.id) }}">فتح</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 <div class="card mt-2">
   <h3>تاريخ القيد (T-3.2 / T-3.5)</h3>
   <table class="data">

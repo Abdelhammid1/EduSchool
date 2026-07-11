@@ -28,10 +28,12 @@
       </td>
       <td class="actions">
         <a class="btn btn-ghost btn-sm" href="{{ url_for('teachers.teacher_detail', teacher_id=t.id) }}">عرض</a>
-        <form action="{{ url_for('teachers.teacher_toggle', teacher_id=t.id) }}" method="post" style="display:inline">
+        <form action="{{ url_for('teachers.teacher_toggle', teacher_id=t.id) }}" method="post" style="display:inline"
+              onsubmit="return confirm('{{ 'تعطيل المعلم لن يحذف بياناته، لكن سيمنعه من الدخول للمنصة وسيُخفيه من الإسنادات الجديدة. هل تريد المتابعة؟' if t.is_active else 'إعادة تفعيل المعلم؟' }}')">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-sm {{ 'btn-danger' if t.is_active else 'btn-navy' }}" type="submit">
-            {{ 'تعطيل' if t.is_active else 'تفعيل' }}
+          <button class="btn btn-sm {{ 'btn-danger' if t.is_active else 'btn-navy' }}" type="submit"
+                  title="{{ 'تعطيل الحساب — لن يُحذف السجل' if t.is_active else 'إعادة تفعيل الحساب' }}">
+            {{ '🚫 تعطيل' if t.is_active else '✓ تفعيل' }}
           </button>
         </form>
       </td>

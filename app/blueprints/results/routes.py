@@ -9,7 +9,7 @@ from ..utils import require_permission
 from ...extensions import db
 from ...models import (
     AcademicYear, AssessmentComponent, Assignment, Enrollment, Grade,
-    GradeEntry, PassRule, Section, Student, Subject, Term, YearResult,
+    GradeEntry, PassRule, Section, Student, Subject, Teacher, Term, YearResult,
 )
 
 
@@ -26,6 +26,20 @@ def _get(model, oid):
     if not obj:
         abort(404)
     return obj
+
+
+def _teacher_for_current_user():
+    """Return the Teacher row for the logged-in user, or None (admins etc.)."""
+    return Teacher.query.filter_by(school_id=_sid(), user_id=current_user.id).first()
+
+
+def _teacher_can_grade(teacher, section, subject):
+    """Sprint 9 (TC-7.3.3): teacher may only enter grades for (section, subject)
+    pairs they have an active Assignment for."""
+    return Assignment.query.filter_by(
+        teacher_id=teacher.id, section_id=section.id,
+        subject_id=subject.id, year_id=section.year_id, is_active=True,
+    ).first() is not None
 
 
 def _rule_for(year_id):
@@ -136,12 +150,35 @@ def grades_index():
     terms = []
     subjects = []
     if year:
-        sections = (
-            Section.query.filter_by(school_id=_sid(), year_id=year.id)
-            .join(Grade).order_by(Grade.order_index, Section.name).all()
+        sections_q = (
+            Section.query.filter_by(school_id=_sid(), year_id=year.id).join(Grade)
         )
+        subjects_q = Subject.query.filter_by(school_id=_sid())
+
+        # Sprint 9 TC-7.3.3: teacher sees only their assigned (section, subject) pairs.
+        teacher = _teacher_for_current_user()
+        if teacher:
+            assignments = Assignment.query.filter_by(
+                teacher_id=teacher.id, year_id=year.id, is_active=True,
+            ).all()
+            assigned_section_ids = {a.section_id for a in assignments}
+            assigned_subject_ids = {a.subject_id for a in assignments}
+            if not assignments:
+                sections = subjects = []
+            else:
+                sections = (
+                    sections_q.filter(Section.id.in_(assigned_section_ids))
+                    .order_by(Grade.order_index, Section.name).all()
+                )
+                subjects = (
+                    subjects_q.filter(Subject.id.in_(assigned_subject_ids))
+                    .order_by(Subject.name).all()
+                )
+        else:
+            sections = sections_q.order_by(Grade.order_index, Section.name).all()
+            subjects = subjects_q.order_by(Subject.name).all()
+
         terms = Term.query.filter_by(school_id=_sid(), year_id=year.id).order_by(Term.order_index).all()
-        subjects = Subject.query.filter_by(school_id=_sid()).order_by(Subject.name).all()
     return render_template(
         "results/grades_index.html",
         year=year, sections=sections, terms=terms, subjects=subjects,
@@ -155,6 +192,15 @@ def grade_sheet(section_id, term_id, subject_id):
     section = _get(Section, section_id)
     term = _get(Term, term_id)
     subject = _get(Subject, subject_id)
+
+    # Sprint 9 TC-7.3.3: teachers can only grade sections/subjects they're assigned to.
+    teacher = _teacher_for_current_user()
+    if teacher and not _teacher_can_grade(teacher, section, subject):
+        flash(
+            "لا تملك صلاحية رصد درجات هذه المادة لهذا الفصل — يمكنك رصد درجات المواد المسندة إليك فقط.",
+            "danger",
+        )
+        return redirect(url_for("results.grades_index"))
 
     locked = YearResult.query.join(Enrollment).filter(
         Enrollment.section_id == section.id,
@@ -311,6 +357,84 @@ def section_results(section_id):
     return render_template(
         "results/section_results.html",
         section=section, year=year, rule=rule, rows=rows, approved=approved,
+    )
+
+
+@bp.route("/section/<int:section_id>/term/<int:term_id>")
+@login_required
+@require_permission("results", "view")
+def term_results(section_id, term_id):
+    """Sprint 9 TC-7.5.1 — per-term result view.
+
+    Shows one row per student × one column per subject with the total score
+    earned that term (sum of component scores) and per-subject pass/fail
+    against the PassRule subject threshold.
+    """
+    section = _get(Section, section_id)
+    term = _get(Term, term_id)
+    rule = _rule_for(section.year_id)
+    subjects = _subjects_for_grade(section.grade_id)
+    enrollments = (
+        Enrollment.query.filter_by(
+            school_id=_sid(), year_id=section.year_id,
+            section_id=section.id, status="active",
+        ).join(Student).order_by(Student.full_name).all()
+    )
+
+    # Preload GradeEntry rows for all (enrollment × component) in this term.
+    components_by_subject = {}
+    for subject in subjects:
+        components_by_subject[subject.id] = (
+            AssessmentComponent.query.filter_by(
+                school_id=_sid(), term_id=term.id, subject_id=subject.id,
+            ).all()
+        )
+    all_component_ids = {
+        c.id for comps in components_by_subject.values() for c in comps
+    }
+    entries = {}
+    if all_component_ids and enrollments:
+        for ge in GradeEntry.query.filter(
+            GradeEntry.component_id.in_(all_component_ids),
+            GradeEntry.enrollment_id.in_([e.id for e in enrollments]),
+        ).all():
+            entries[(ge.enrollment_id, ge.component_id)] = ge
+
+    # Build a matrix: rows keyed by enrollment_id, cols keyed by subject_id.
+    matrix = {}
+    for e in enrollments:
+        row = {"enrollment": e, "cells": {}}
+        for subject in subjects:
+            comps = components_by_subject[subject.id]
+            if not comps:
+                row["cells"][subject.id] = {"score": None, "max": None, "status": "no_components"}
+                continue
+            recorded = [entries[(e.id, c.id)] for c in comps if (e.id, c.id) in entries]
+            if len(recorded) < len(comps):
+                row["cells"][subject.id] = {
+                    "score": sum((r.score for r in recorded), Decimal(0)),
+                    "max": sum((c.max_score for c in comps), Decimal(0)),
+                    "status": "incomplete",
+                }
+            else:
+                total_score = sum((r.score for r in recorded), Decimal(0))
+                total_max = sum((c.max_score for c in comps), Decimal(0))
+                percent = (total_score / total_max * 100) if total_max else Decimal(0)
+                row["cells"][subject.id] = {
+                    "score": total_score,
+                    "max": total_max,
+                    "percent": percent,
+                    "status": (
+                        "pass" if percent >= rule.subject_pass_threshold else "fail"
+                    ),
+                }
+        matrix[e.id] = row
+
+    return render_template(
+        "results/term_results.html",
+        section=section, term=term, rule=rule,
+        subjects=subjects, matrix=matrix,
+        enrollments=enrollments,
     )
 
 

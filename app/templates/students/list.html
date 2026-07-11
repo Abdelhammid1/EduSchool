@@ -3,8 +3,15 @@
 {% block content %}
 <div class="page-title">
   <div>
-    <h2>الطلاب</h2>
-    <div class="sub">الملف الدائم للطالب — لا يتغيّر عبر السنوات (T-3.1)</div>
+    <h2>الطلاب{% if section_ctx %} — فصل {{ section_ctx.grade.name }} / {{ section_ctx.name }}{% endif %}</h2>
+    <div class="sub">
+      {% if section_ctx %}
+        عرض طلاب الفصل النشطين في السنة {{ section_ctx.year.name }}.
+        <a href="{{ url_for('students.students_list') }}">إزالة الفلترة</a>
+      {% else %}
+        الملف الدائم للطالب — لا يتغيّر عبر السنوات (T-3.1)
+      {% endif %}
+    </div>
   </div>
   <div class="flex">
     <a href="{{ url_for('students.promotion') }}" class="btn btn-ghost">الترقية بين الصفوف</a>

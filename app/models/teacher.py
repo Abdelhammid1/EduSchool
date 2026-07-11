@@ -35,7 +35,9 @@ class Subject(db.Model):
     school_id = db.Column(db.Integer, db.ForeignKey("schools.id"), nullable=False, index=True)
     name = db.Column(db.String(128), nullable=False)
     code = db.Column(db.String(32))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(
+        db.Boolean, default=True, nullable=False, server_default="true"
+    )
 
     grades = db.relationship("Grade", secondary=subject_grades, backref="subjects")
     assignments = db.relationship("Assignment", backref="subject")

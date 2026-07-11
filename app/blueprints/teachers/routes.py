@@ -131,6 +131,22 @@ def subjects_list():
     return render_template("teachers/subjects_list.html", subjects=subjects)
 
 
+@bp.route("/subjects/<int:subject_id>/toggle", methods=["POST"])
+@login_required
+@require_permission("teachers", "edit")
+def subject_toggle(subject_id):
+    """Sprint 9 TC-4.2.2 — soft-disable a subject (hard delete would break
+    historical GradeEntry rows)."""
+    subject = _get(Subject, subject_id)
+    subject.is_active = not subject.is_active
+    db.session.commit()
+    flash(
+        f"تم {'تعطيل' if not subject.is_active else 'تفعيل'} المادة ({subject.name}).",
+        "success",
+    )
+    return redirect(url_for("teachers.subjects_list"))
+
+
 @bp.route("/subjects/new", methods=["GET", "POST"])
 @login_required
 @require_permission("teachers", "add")
