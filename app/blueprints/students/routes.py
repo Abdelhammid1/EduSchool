@@ -9,6 +9,7 @@ from ..utils import require_permission
 from ...extensions import db
 from ...models import (
     AcademicYear, Grade, Section, School, Student, Enrollment, TransferLog, User,
+    YearResult,
 )
 
 
@@ -278,12 +279,23 @@ def status_change(enrollment_id):
     return render_template("students/status.html", enrollment=enrollment)
 
 
-# ---------- T-3.4: Vertical promotion ----------
+# ---------- T-3.4 / Sprint 8 Ticket 4: Auto pass/fail-driven promotion ----------
 
 @bp.route("/promotion", methods=["GET", "POST"])
 @login_required
 @require_permission("students", "edit")
 def promotion():
+    """Promote each active enrollment according to its approved YearResult.
+
+    Behavior:
+      - Pass students → new enrollment in the next grade / target section.
+      - Fail students → new enrollment in the same grade / target section.
+      - Students without an approved YearResult are surfaced in an
+        'incomplete' bucket and skipped (user must approve results first).
+
+    The whole operation runs in a single DB transaction — on any error the
+    entire batch is rolled back.
+    """
     years = (
         AcademicYear.query.filter_by(school_id=_sid())
         .order_by(AcademicYear.start_date.desc())
@@ -292,11 +304,23 @@ def promotion():
     grades = Grade.query.filter_by(school_id=_sid()).order_by(Grade.order_index).all()
     target_year = _active_year()
 
-    from_year_id = request.args.get("from_year_id", type=int)
-    grade_id = request.args.get("grade_id", type=int)
-    candidates = []
+    # Accept these either from query string (GET picker) or form body (POST from same page).
+    from_year_id = (
+        request.args.get("from_year_id", type=int)
+        or request.form.get("from_year_id", type=int)
+    )
+    grade_id = (
+        request.args.get("grade_id", type=int)
+        or request.form.get("grade_id", type=int)
+    )
+
+    passes = []                # [(enrollment, YearResult)]
+    fails = []                 # [(enrollment, YearResult)]
+    incomplete_no_yr = []      # [enrollment] (no YearResult yet)
+    incomplete_status = []     # [(enrollment, YearResult)] (status='incomplete')
     next_grade = None
-    target_sections = []
+    next_grade_sections = []   # target sections in the NEXT grade
+    same_grade_sections = []   # target sections in the SAME grade
 
     if from_year_id and grade_id:
         from_year = _get(AcademicYear, from_year_id)
@@ -307,18 +331,50 @@ def promotion():
             .order_by(Grade.order_index)
             .first()
         )
-        candidates = (
+
+        active_enrollments = (
             Enrollment.query.filter_by(
-                school_id=_sid(), year_id=from_year.id, grade_id=grade_id, status="active"
+                school_id=_sid(), year_id=from_year.id,
+                grade_id=grade_id, status="active",
             )
             .join(Student)
             .order_by(Student.full_name)
             .all()
         )
-        if target_year and next_grade:
-            target_sections = (
+
+        # Pull all YearResult rows for these enrollments in one query
+        eids = [e.id for e in active_enrollments]
+        yrs_by_eid = {
+            yr.enrollment_id: yr
+            for yr in YearResult.query.filter(YearResult.enrollment_id.in_(eids)).all()
+        }
+
+        # Split by status
+        for e in active_enrollments:
+            yr = yrs_by_eid.get(e.id)
+            if yr is None:
+                incomplete_no_yr.append(e)
+            elif yr.status == "pass":
+                passes.append((e, yr))
+            elif yr.status == "fail":
+                fails.append((e, yr))
+            else:
+                incomplete_status.append((e, yr))
+
+        if target_year:
+            if next_grade:
+                next_grade_sections = (
+                    Section.query.filter_by(
+                        school_id=_sid(), year_id=target_year.id,
+                        grade_id=next_grade.id,
+                    )
+                    .order_by(Section.name)
+                    .all()
+                )
+            same_grade_sections = (
                 Section.query.filter_by(
-                    school_id=_sid(), year_id=target_year.id, grade_id=next_grade.id
+                    school_id=_sid(), year_id=target_year.id,
+                    grade_id=current_grade.id,
                 )
                 .order_by(Section.name)
                 .all()
@@ -328,63 +384,127 @@ def promotion():
         if not target_year:
             flash("لا توجد سنة نشطة لاستقبال الترقية.", "danger")
             return redirect(url_for("students.promotion"))
-        action = request.form.get("action")  # promote | retain
-        section_id = request.form.get("target_section_id", type=int)
-        enrollment_ids = request.form.getlist("enrollment_ids", type=int)
-        promoted, retained, skipped = 0, 0, 0
 
-        for eid in enrollment_ids:
-            e = Enrollment.query.filter_by(id=eid, school_id=_sid()).first()
-            if not e or e.status != "active":
-                continue
+        promote_section_id = request.form.get("promote_section_id", type=int)
+        retain_section_id = request.form.get("retain_section_id", type=int)
 
-            already = Enrollment.query.filter_by(
-                student_id=e.student_id, year_id=target_year.id
-            ).first()
-            if already:
-                skipped += 1
-                continue
+        # Feasibility: need a target section for whichever bucket has students
+        if passes and not promote_section_id:
+            flash("اختر الفصل المستهدف للطلاب الناجحين قبل التنفيذ.", "danger")
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
+        if fails and not retain_section_id:
+            flash("اختر الفصل المستهدف للطلاب الراسبين قبل التنفيذ.", "danger")
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
+        if passes and not next_grade:
+            flash("لا يوجد صف أعلى — تعذّر ترقية الناجحين. راجع الصفوف.", "danger")
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
 
-            if action == "retain":
-                e.final_result = "fail"
-                e.status = "promoted_out"
-                new_enr = Enrollment(
-                    school_id=_sid(),
-                    student_id=e.student_id,
-                    year_id=target_year.id,
-                    grade_id=e.grade_id,
-                    section_id=section_id,
-                    status="active",
-                    enrolled_at=date.today(),
-                )
-                db.session.add(new_enr)
-                retained += 1
-            else:
-                if not next_grade:
-                    skipped += 1
+        promote_section = (
+            db.session.get(Section, promote_section_id) if promote_section_id else None
+        )
+        retain_section = (
+            db.session.get(Section, retain_section_id) if retain_section_id else None
+        )
+
+        # Validate the sections match the expected grades + belong to target_year
+        if promote_section and (
+            promote_section.year_id != target_year.id
+            or (next_grade and promote_section.grade_id != next_grade.id)
+        ):
+            flash("الفصل المستهدف للناجحين غير صالح.", "danger")
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
+        if retain_section and (
+            retain_section.year_id != target_year.id
+            or retain_section.grade_id != grade_id
+        ):
+            flash("الفصل المستهدف للراسبين غير صالح.", "danger")
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
+
+        promoted_n = 0
+        retained_n = 0
+        skipped_already_enrolled = 0
+        skipped_capacity = 0
+
+        try:
+            # Single transaction — commit at the end, rollback on any error
+            for e, yr in passes:
+                already = Enrollment.query.filter_by(
+                    student_id=e.student_id, year_id=target_year.id
+                ).first()
+                if already:
+                    skipped_already_enrolled += 1
                     continue
-                section = db.session.get(Section, section_id) if section_id else None
-                if not section or section.grade_id != next_grade.id or section.is_full:
-                    skipped += 1
+                if promote_section.is_full:
+                    skipped_capacity += 1
                     continue
                 e.final_result = "pass"
                 e.status = "promoted_out"
-                new_enr = Enrollment(
+                db.session.add(Enrollment(
                     school_id=_sid(),
                     student_id=e.student_id,
                     year_id=target_year.id,
                     grade_id=next_grade.id,
-                    section_id=section.id,
+                    section_id=promote_section.id,
                     status="active",
                     enrolled_at=date.today(),
-                )
-                db.session.add(new_enr)
-                promoted += 1
-        db.session.commit()
-        flash(
-            f"تمت الترقية: {promoted} ناجح • {retained} راسب (في نفس الصف) • {skipped} تم تخطيه (سعة/تكرار/قاعدة).",
-            "info",
+                ))
+                promoted_n += 1
+
+            for e, yr in fails:
+                already = Enrollment.query.filter_by(
+                    student_id=e.student_id, year_id=target_year.id
+                ).first()
+                if already:
+                    skipped_already_enrolled += 1
+                    continue
+                if retain_section.is_full:
+                    skipped_capacity += 1
+                    continue
+                e.final_result = "fail"
+                e.status = "promoted_out"
+                db.session.add(Enrollment(
+                    school_id=_sid(),
+                    student_id=e.student_id,
+                    year_id=target_year.id,
+                    grade_id=e.grade_id,
+                    section_id=retain_section.id,
+                    status="active",
+                    enrolled_at=date.today(),
+                ))
+                retained_n += 1
+
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception("promotion transaction failed")
+            flash(
+                f"فشلت عملية الترقية وتمّ إلغاء كل التغييرات: {exc}",
+                "danger",
+            )
+            return redirect(
+                url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
+            )
+
+        msg = (
+            f"تمّ اعتماد الترقية: {promoted_n} ناجح تمّت ترقيتهم • "
+            f"{retained_n} راسب أُبقوا في نفس الصف"
         )
+        if skipped_already_enrolled or skipped_capacity:
+            msg += (
+                f" • تخطّي {skipped_already_enrolled + skipped_capacity} "
+                f"(قيد مُسبق أو فصل ممتلئ)"
+            )
+        flash(msg + ".", "success")
         return redirect(
             url_for("students.promotion", from_year_id=from_year_id, grade_id=grade_id)
         )
@@ -395,10 +515,14 @@ def promotion():
         grades=grades,
         from_year_id=from_year_id,
         grade_id=grade_id,
-        candidates=candidates,
-        next_grade=next_grade,
         target_year=target_year,
-        target_sections=target_sections,
+        next_grade=next_grade,
+        passes=passes,
+        fails=fails,
+        incomplete_no_yr=incomplete_no_yr,
+        incomplete_status=incomplete_status,
+        next_grade_sections=next_grade_sections,
+        same_grade_sections=same_grade_sections,
     )
 
 
