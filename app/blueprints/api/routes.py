@@ -14,9 +14,10 @@ from werkzeug.utils import secure_filename
 from . import bp
 from ...extensions import bcrypt, csrf, db
 from ...models import (
-    AcademicYear, Assignment, AssessmentComponent, Attendance, Enrollment,
-    GradeEntry, Invoice, Material, NotificationLog, Payment, ScheduleSlot,
-    School, Section, Student, Subject, Teacher, Term, User, YearResult,
+    AcademicYear, Assignment, AssessmentComponent, Attendance, DeviceToken,
+    Enrollment, GradeEntry, Invoice, Material, NotificationLog, Payment,
+    ScheduleSlot, School, Section, Student, Subject, Teacher, Term, User,
+    YearResult,
 )
 from ...models.results import RESULT_STATUSES
 from ...services.auth_jwt import issue_token, jwt_required
@@ -562,6 +563,61 @@ def change_password():
     u.set_password(new_pw)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+# ---------- Sprint 10 Phase 3: FCM device tokens + notification read ----------
+
+@bp.route("/auth/device-token", methods=["POST"])
+@jwt_required
+def register_device_token():
+    """Register/upsert an FCM device token for the current user's app install."""
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    platform = data.get("platform")
+    app_name = data.get("app")
+    if not token or platform not in ("ios", "android") or app_name not in ("teacher", "parent"):
+        return _err("invalid payload: need token, platform=ios|android, app=teacher|parent")
+    existing = DeviceToken.query.filter_by(token=token).first()
+    if existing:
+        # Re-associate to the current user (e.g. logged out and back in on same device)
+        existing.user_id = _user().id
+        existing.app = app_name
+        existing.platform = platform
+        existing.last_seen_at = datetime.utcnow()
+    else:
+        db.session.add(DeviceToken(
+            school_id=_sid(),
+            user_id=_user().id,
+            platform=platform,
+            token=token,
+            app=app_name,
+        ))
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/auth/device-token", methods=["DELETE"])
+@jwt_required
+def unregister_device_token():
+    """Called on logout — removes the token so this device stops receiving pushes."""
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    if token:
+        DeviceToken.query.filter_by(token=token, user_id=_user().id).delete()
+        db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/notifications/<int:notif_id>/read", methods=["POST"])
+@jwt_required
+def mark_notification_read(notif_id):
+    """Mark a parent notification as read (from a push tap or tab visit)."""
+    n = NotificationLog.query.filter_by(id=notif_id, school_id=_sid()).first()
+    if not n:
+        return _err("not found", 404)
+    n.read_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "read_at": n.read_at.isoformat()})
 
 
 def _material_dict(m):

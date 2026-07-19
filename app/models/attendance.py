@@ -40,4 +40,21 @@ class NotificationLog(db.Model):
     error = db.Column(db.String(255))
     related_kind = db.Column(db.String(32))
     related_id = db.Column(db.Integer)
+    read_at = db.Column(db.DateTime, nullable=True)  # Sprint 10: parent tapped/read
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class DeviceToken(db.Model):
+    """Sprint 10 Phase 3 — FCM device token registered by mobile apps."""
+    __tablename__ = "device_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    school_id = db.Column(db.Integer, db.ForeignKey("schools.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    platform = db.Column(db.String(16), nullable=False)  # "ios" | "android"
+    token = db.Column(db.String(255), nullable=False, unique=True)
+    app = db.Column(db.String(16), nullable=False)  # "teacher" | "parent"
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", backref="device_tokens")
