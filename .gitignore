@@ -19,3 +19,10 @@ migrations/versions/*.pyc
 
 AppIcons.zip
 AppIcons/
+
+# Sprint 10 — teacher-uploaded materials + Firebase service account
+app/static/uploads/materials/
+!app/static/uploads/.gitkeep
+manasety-fcm-service-account.json
+mobile/*/ios/Runner/GoogleService-Info.plist
+mobile/*/android/app/google-services.json

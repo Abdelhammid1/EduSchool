@@ -202,6 +202,64 @@ Last 50 notifications routed to any of the parent's phone numbers.
 
 ---
 
+## Teacher-write pre-fill + upload (Sprint 10 Phase 2)
+
+### `GET /api/teacher/components?subject_id=&term_id=`
+List active `AssessmentComponent` records for a (subject, term) pair. Used by grade-entry form to build the component picker.
+```json
+{ "components": [
+  { "id": 4, "name": "أعمال سنة", "max_score": 30.0 },
+  { "id": 5, "name": "نهاية الفترة", "max_score": 70.0 }
+]}
+```
+
+### `GET /api/teacher/grades?section_id=&subject_id=&term_id=&component_id=`
+Fetch existing `GradeEntry` values so the grade-entry form pre-fills for edits.
+Requires teacher to be assigned to (section, subject).
+```json
+{ "entries": [
+  { "enrollment_id": 42, "score": 27.5 }
+]}
+```
+
+### `GET /api/teacher/attendance?section_id=&date=YYYY-MM-DD`
+Fetch existing `Attendance` records for a (section, date) so the attendance form pre-fills.
+Requires teacher to be assigned to section.
+```json
+{
+  "date": "2026-07-19",
+  "records": [
+    { "enrollment_id": 42, "status": "present", "notes": null }
+  ]
+}
+```
+
+### `POST /api/teacher/upload` — multipart/form-data
+Upload a file as a teaching material. Fields:
+- `file` (required, PDF or JPG/JPEG/PNG, max 10MB)
+- `section_id`, `subject_id` (required)
+- `title` (required), `description` (optional)
+
+Returns `201` with:
+```json
+{
+  "id": 8, "title": "ملخص الوحدة 3",
+  "file_path": "/static/uploads/materials/1/abc123.pdf",
+  "kind": "file",
+  "section_name": "الصف الأول / أ"
+}
+```
+`413` on files >10MB. `400` on unsupported extension. `403` if not assigned.
+
+### `POST /api/auth/change-password`
+Change the authenticated user's password.
+```json
+{ "old_password": "current", "new_password": "at least 8 chars" }
+```
+`200 {"ok": true}` on success. `401` on wrong current password. `400` on new password <8 chars.
+
+---
+
 ## Error format
 
 All errors return JSON `{ "error": "message" }` with appropriate HTTP code (400/401/403/404).

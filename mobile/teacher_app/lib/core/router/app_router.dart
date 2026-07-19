@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/attendance/presentation/take_attendance_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/grades/presentation/grade_picker_screen.dart';
+import '../../features/grades/presentation/grade_entry_screen.dart';
 import '../../features/home/presentation/main_scaffold.dart';
+import '../../features/materials/presentation/upload_material_screen.dart';
+import '../../features/profile/presentation/change_password_screen.dart';
 import '../../features/sections/presentation/section_detail_screen.dart';
 import '../theme/colors.dart';
 import 'routes.dart';
@@ -34,6 +39,45 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return SectionDetailScreen(sectionId: id);
         },
+      ),
+      GoRoute(
+        path: '/sections/:id/attendance',
+        builder: (_, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final dateStr = state.uri.queryParameters['date'];
+          final date = dateStr != null ? DateTime.tryParse(dateStr) : null;
+          return TakeAttendanceScreen(sectionId: id, initialDate: date);
+        },
+      ),
+      GoRoute(
+        path: '/sections/:id/grades',
+        builder: (_, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return GradePickerScreen(sectionId: id);
+        },
+      ),
+      GoRoute(
+        path: '/sections/:id/grades/entry',
+        builder: (_, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final q = state.uri.queryParameters;
+          return GradeEntryScreen(
+            sectionId: id,
+            termId: int.parse(q['term']!),
+            subjectId: int.parse(q['subject']!),
+            componentId: int.parse(q['component']!),
+            componentName: q['name'] ?? '',
+            maxScore: double.tryParse(q['max'] ?? '') ?? 100.0,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/materials/upload',
+        builder: (_, __) => const UploadMaterialScreen(),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        builder: (_, __) => const ChangePasswordScreen(),
       ),
     ],
     errorBuilder: (_, state) => Scaffold(

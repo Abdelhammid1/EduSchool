@@ -3,13 +3,16 @@
 All endpoints under /api/ — JWT auth via Authorization: Bearer <token>.
 Routes auto-scope to the authenticated user's school_id.
 """
+import os
+import uuid
 from datetime import datetime, date
 from decimal import Decimal
 
-from flask import g, jsonify, request
+from flask import current_app, g, jsonify, request
+from werkzeug.utils import secure_filename
 
 from . import bp
-from ...extensions import csrf, db
+from ...extensions import bcrypt, csrf, db
 from ...models import (
     AcademicYear, Assignment, AssessmentComponent, Attendance, Enrollment,
     GradeEntry, Invoice, Material, NotificationLog, Payment, ScheduleSlot,
@@ -386,6 +389,179 @@ def teacher_materials():
 
     materials = Material.query.filter_by(school_id=_sid(), teacher_id=t.id).order_by(Material.created_at.desc()).all()
     return jsonify({"materials": [_material_dict(m) for m in materials]})
+
+
+# ---------- Sprint 10 Phase 2: teacher-write pre-fill + upload + password ----------
+
+@bp.route("/teacher/components", methods=["GET"])
+@jwt_required
+def teacher_components():
+    """List active assessment components for a (subject, term)."""
+    t = _teacher_for(_user())
+    if not t:
+        return _err("not a teacher", 403)
+    subject_id = request.args.get("subject_id", type=int)
+    term_id = request.args.get("term_id", type=int)
+    if not (subject_id and term_id):
+        return _err("subject_id and term_id required")
+    comps = AssessmentComponent.query.filter_by(
+        school_id=_sid(), subject_id=subject_id, term_id=term_id,
+    ).order_by(AssessmentComponent.id).all()
+    return jsonify({"components": [
+        {"id": c.id, "name": c.name, "max_score": float(c.max_score)}
+        for c in comps
+    ]})
+
+
+@bp.route("/teacher/grades", methods=["GET"])
+@jwt_required
+def teacher_grades_existing():
+    """Fetch existing grades for (section, subject, term, component) for edit-mode pre-fill."""
+    t = _teacher_for(_user())
+    if not t:
+        return _err("not a teacher", 403)
+    section_id = request.args.get("section_id", type=int)
+    subject_id = request.args.get("subject_id", type=int)
+    term_id = request.args.get("term_id", type=int)
+    component_id = request.args.get("component_id", type=int)
+    if not all([section_id, subject_id, term_id, component_id]):
+        return _err("missing query params")
+    section = Section.query.filter_by(id=section_id, school_id=_sid()).first()
+    if not section:
+        return _err("section not found", 404)
+    # Reuse the same scope check the POST already applies
+    if not Assignment.query.filter_by(
+        teacher_id=t.id, section_id=section.id, subject_id=subject_id,
+        year_id=section.year_id, is_active=True,
+    ).first():
+        return _err("teacher not assigned to this subject in this section", 403)
+    eids = [
+        e.id for e in Enrollment.query.filter_by(
+            school_id=_sid(), year_id=section.year_id,
+            section_id=section.id, status="active",
+        ).all()
+    ]
+    rows = GradeEntry.query.filter(
+        GradeEntry.enrollment_id.in_(eids),
+        GradeEntry.component_id == component_id,
+    ).all()
+    return jsonify({"entries": [
+        {"enrollment_id": r.enrollment_id, "score": float(r.score)}
+        for r in rows
+    ]})
+
+
+@bp.route("/teacher/attendance", methods=["GET"])
+@jwt_required
+def teacher_attendance_existing():
+    """Fetch existing attendance for a (section, date) so the form pre-fills."""
+    t = _teacher_for(_user())
+    if not t:
+        return _err("not a teacher", 403)
+    section_id = request.args.get("section_id", type=int)
+    if not section_id:
+        return _err("section_id required")
+    on_date = _parse_date(request.args.get("date")) or date.today()
+    section = Section.query.filter_by(id=section_id, school_id=_sid()).first()
+    if not section:
+        return _err("section not found", 404)
+    if not Assignment.query.filter_by(
+        teacher_id=t.id, section_id=section.id,
+        year_id=section.year_id, is_active=True,
+    ).first():
+        return _err("teacher not assigned to this section", 403)
+    eids = [
+        e.id for e in Enrollment.query.filter_by(
+            school_id=_sid(), year_id=section.year_id,
+            section_id=section.id, status="active",
+        ).all()
+    ]
+    rows = Attendance.query.filter(
+        Attendance.enrollment_id.in_(eids),
+        Attendance.date == on_date,
+    ).all()
+    return jsonify({
+        "date": on_date.isoformat(),
+        "records": [
+            {"enrollment_id": r.enrollment_id, "status": r.status, "notes": r.notes}
+            for r in rows
+        ],
+    })
+
+
+ALLOWED_UPLOAD_EXTS = {".pdf", ".jpg", ".jpeg", ".png"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+@bp.route("/teacher/upload", methods=["POST"])
+@jwt_required
+def teacher_upload():
+    """Multipart upload: file + section_id + subject_id + title + optional description."""
+    t = _teacher_for(_user())
+    if not t:
+        return _err("not a teacher", 403)
+    file = request.files.get("file")
+    section_id = request.form.get("section_id", type=int)
+    subject_id = request.form.get("subject_id", type=int)
+    title = (request.form.get("title") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    if not (file and section_id and subject_id and title):
+        return _err("missing file or fields")
+    section = Section.query.filter_by(id=section_id, school_id=_sid()).first()
+    if not section:
+        return _err("section not found", 404)
+    # Same Assignment scope check
+    if not Assignment.query.filter_by(
+        teacher_id=t.id, section_id=section.id, subject_id=subject_id,
+        year_id=section.year_id, is_active=True,
+    ).first():
+        return _err("teacher not assigned to this subject in this section", 403)
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_UPLOAD_EXTS:
+        return _err(f"unsupported file type ({ext})")
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_UPLOAD_BYTES:
+        return _err("file too large (max 10MB)", 413)
+
+    upload_dir = os.path.join(
+        current_app.root_path, "static", "uploads", "materials", str(_sid()),
+    )
+    os.makedirs(upload_dir, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}{ext}"
+    fpath = os.path.join(upload_dir, fname)
+    file.save(fpath)
+    rel_path = f"/static/uploads/materials/{_sid()}/{fname}"
+
+    m = Material(
+        school_id=_sid(), teacher_id=t.id, year_id=section.year_id,
+        section_id=section.id, subject_id=subject_id, title=title,
+        description=description, kind="file", file_path=rel_path,
+    )
+    db.session.add(m)
+    db.session.commit()
+    return jsonify({
+        "id": m.id, "title": m.title, "file_path": rel_path,
+        "kind": "file", "section_name": f"{section.grade.name} / {section.name}",
+    }), 201
+
+
+@bp.route("/auth/change-password", methods=["POST"])
+@jwt_required
+def change_password():
+    data = request.get_json(silent=True) or {}
+    old_pw = data.get("old_password") or ""
+    new_pw = data.get("new_password") or ""
+    if len(new_pw) < 8:
+        return _err("password must be at least 8 characters")
+    u = _user()
+    if not u.check_password(old_pw):
+        return _err("current password incorrect", 401)
+    u.set_password(new_pw)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 def _material_dict(m):

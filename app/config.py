@@ -19,3 +19,7 @@ class Config:
     WHATSAPP_PROVIDER = os.environ.get("WHATSAPP_PROVIDER", "stub")
     LANGUAGES = ["ar"]
     DEFAULT_LANGUAGE = "ar"
+    # Sprint 10 Phase 2 — cap uploaded material file size at 10 MB
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    # Sprint 10 Phase 3 — Firebase Cloud Messaging service-account path (optional)
+    FCM_SERVICE_ACCOUNT_PATH = os.environ.get("FCM_SERVICE_ACCOUNT_PATH")

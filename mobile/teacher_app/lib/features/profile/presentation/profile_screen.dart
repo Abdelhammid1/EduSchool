@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/env.dart';
 import '../../../core/theme/colors.dart';
@@ -51,6 +52,30 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(height: 1),
                 _row(Icons.school_outlined, 'المؤسسة',
                     Env.institutionNameAr),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.upload_file, color: AppColors.navy),
+                  title: const Text('رفع مادة جديدة',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('PDF أو صورة أو رابط لطلاب فصلك',
+                      style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                  trailing: const Icon(Icons.chevron_left, color: AppColors.muted),
+                  onTap: () => context.push('/materials/upload'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline, color: AppColors.navy),
+                  title: const Text('تغيير كلمة المرور',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: const Icon(Icons.chevron_left, color: AppColors.muted),
+                  onTap: () => context.push('/profile/change-password'),
+                ),
               ],
             ),
           ),
