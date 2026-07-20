@@ -292,9 +292,14 @@ def invoice_print(invoice_id):
     inv = _get(Invoice, invoice_id)
     download = request.args.get("download") == "1"
     if download:
-        from weasyprint import HTML
         html = render_template("finance/invoice_print.html", inv=inv, download=True)
-        pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+        try:
+            from weasyprint import HTML
+            pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.exception("WeasyPrint invoice PDF failed: %s", e)
+            # Fallback: return the printable HTML so the browser can Save-as-PDF
+            return Response(html, mimetype="text/html")
         return Response(
             pdf_bytes,
             mimetype="application/pdf",
@@ -644,15 +649,42 @@ def reports_export():
             },
         )
 
-    # Default: PDF via WeasyPrint (renders the print-optimized template)
-    from weasyprint import HTML
+    # Default: PDF via WeasyPrint (renders the print-optimized template).
+    #
+    # Sprint 10 hotfix — WeasyPrint has native deps (Pango, Cairo, GDK-PixBuf,
+    # HarfBuzz). On production servers those must be installed with the OS
+    # package manager (apt install libpango-1.0-0 libpangoft2-1.0-0 …).
+    # If the deps are missing, the `import weasyprint` line raises OSError.
+    # We catch it and fall back to a printable HTML page + a clear Arabic
+    # error message so the user isn't stuck on a bare 500.
     html = render_template(
         "finance/reports_pdf.html",
         start=start, end=end,
         grouped=grouped, totals=totals, net_income=net_income,
         label_ar=label_ar,
     )
-    pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html, base_url=request.host_url).write_pdf()
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.exception("WeasyPrint PDF export failed: %s", e)
+        # Fallback: return the printable HTML with a banner asking the user
+        # to use browser print (⌘/Ctrl+P → Save as PDF).
+        fallback = (
+            "<!doctype html><html lang='ar' dir='rtl'><head><meta charset='utf-8'>"
+            "<title>تقرير مالي — عرض للطباعة</title></head><body style='font-family:sans-serif'>"
+            "<div style='background:#fef3c7;border:1px solid #d4af37;padding:12px 16px;"
+            "margin-bottom:16px;border-radius:6px;color:#1a2d6c'>"
+            "<strong>ملاحظة:</strong> تعذّر توليد ملف PDF على السيرفر "
+            "(قد تكون مكتبات WeasyPrint الأساسية غير مثبَّتة). "
+            "استخدم أمر <strong>طباعة</strong> في المتصفح "
+            "(⌘+P أو Ctrl+P) واختر <em>حفظ كملف PDF</em>."
+            "</div>"
+            + html.split("<body>", 1)[-1].split("</body>", 1)[0]
+            + "</body></html>"
+        )
+        return Response(fallback, mimetype="text/html")
+
     return Response(
         pdf_bytes,
         mimetype="application/pdf",

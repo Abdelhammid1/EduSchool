@@ -44,6 +44,14 @@ def _teacher_can_touch_section(teacher, section):
     ).first() is not None
 
 
+def _is_admin():
+    """Sprint 10 hotfix — non-admin users must always be scope-checked, even if
+    they don't have a linked Teacher record. This closes the gap where a User
+    with role=teacher but no Teacher row was treated like an admin."""
+    role_name = getattr(current_user.role, "name", None) if current_user.role else None
+    return role_name == "admin"
+
+
 # ---------- T-6.1 / T-6.2 Daily marking + notifications ----------
 
 @bp.route("")
@@ -57,21 +65,26 @@ def index():
             Section.query.filter_by(school_id=_sid(), year_id=year.id)
             .join(Grade)
         )
-        # Sprint 9 TC-6.1.3: teachers only see sections they're assigned to.
-        teacher = _teacher_for_current_user()
-        if teacher:
-            assigned_ids = {
-                a.section_id for a in Assignment.query.filter_by(
-                    teacher_id=teacher.id, year_id=year.id, is_active=True,
-                ).all()
-            }
-            if not assigned_ids:
-                sections = []
-            else:
-                q = q.filter(Section.id.in_(assigned_ids))
-                sections = q.order_by(Grade.order_index, Section.name).all()
-        else:
+        # Sprint 9 TC-6.1.3 (hardened Sprint 10): admins see all sections.
+        # Anyone else (teacher role, misconfigured account, etc.) is filtered
+        # to their assigned sections — empty list if no assignments.
+        if _is_admin():
             sections = q.order_by(Grade.order_index, Section.name).all()
+        else:
+            teacher = _teacher_for_current_user()
+            if not teacher:
+                sections = []  # non-admin without Teacher record → nothing
+            else:
+                assigned_ids = {
+                    a.section_id for a in Assignment.query.filter_by(
+                        teacher_id=teacher.id, year_id=year.id, is_active=True,
+                    ).all()
+                }
+                if not assigned_ids:
+                    sections = []
+                else:
+                    q = q.filter(Section.id.in_(assigned_ids))
+                    sections = q.order_by(Grade.order_index, Section.name).all()
     return render_template("attendance/index.html", year=year, sections=sections)
 
 
@@ -81,14 +94,17 @@ def index():
 def mark(section_id):
     section = _get(Section, section_id)
 
-    # Sprint 9 TC-6.1.3: teacher can only mark attendance for their assigned sections.
-    teacher = _teacher_for_current_user()
-    if teacher and not _teacher_can_touch_section(teacher, section):
-        flash(
-            "لا تملك صلاحية تسجيل الحضور لهذا الفصل — يمكنك تسجيل الحضور فقط للفصول المسندة إليك.",
-            "danger",
-        )
-        return redirect(url_for("attendance.index"))
+    # Sprint 9 TC-6.1.3 (hardened Sprint 10): non-admins must be assigned to
+    # the section. A User with role=teacher but no Teacher record is denied
+    # (was previously bypassing the check).
+    if not _is_admin():
+        teacher = _teacher_for_current_user()
+        if not teacher or not _teacher_can_touch_section(teacher, section):
+            flash(
+                "لا تملك صلاحية تسجيل الحضور لهذا الفصل — يمكنك تسجيل الحضور فقط للفصول المسندة إليك.",
+                "danger",
+            )
+            return redirect(url_for("attendance.index"))
 
     year = section.year
     on_date = _parse_date(request.values.get("date")) or date.today()

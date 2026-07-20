@@ -59,7 +59,13 @@ su - manasety
 ```bash
 sudo apt install -y python3 python3-venv python3-pip postgresql postgresql-contrib \
     nginx git curl ufw certbot python3-certbot-nginx
+
+# مطلوبات WeasyPrint لتصدير التقارير المالية PDF + طباعة الفواتير:
+sudo apt install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
+    libgdk-pixbuf2.0-0 libffi-dev libjpeg-dev libxml2 libxslt1.1
 ```
+
+> ⚠️ **مهم:** إذا نسيت مكتبات WeasyPrint، سيظهر خطأ 500 عند الضغط على زرّ **تصدير PDF** في التقارير المالية أو **طباعة** الفاتورة. التطبيق ينزل لبديل HTML قابل للطباعة تلقائيًا، لكن التجربة أفضل بكثير مع WeasyPrint مثبَّت.
 
 ### 6) إعداد جدار الحماية
 

@@ -42,6 +42,12 @@ def _teacher_can_grade(teacher, section, subject):
     ).first() is not None
 
 
+def _is_admin():
+    """Sprint 10 hotfix — same as attendance/routes.py._is_admin."""
+    role_name = getattr(current_user.role, "name", None) if current_user.role else None
+    return role_name == "admin"
+
+
 def _rule_for(year_id):
     rule = PassRule.query.filter_by(school_id=_sid(), year_id=year_id).first()
     if not rule:
@@ -69,10 +75,32 @@ def settings():
             return redirect(url_for("results.settings"))
         if not current_user.can("results", "edit"):
             abort(403)
-        rule.subject_pass_threshold = Decimal(request.form["subject_pass_threshold"])
-        rule.overall_pass_threshold = Decimal(request.form["overall_pass_threshold"])
-        rule.method = request.form["method"]
-        rule.allowed_failed_subjects = int(request.form.get("allowed_failed_subjects") or 0)
+        # Sprint 10 hotfix — validate thresholds (was allowing 0 which made
+        # everyone pass under per_subject / overall_only methods).
+        try:
+            subj_th = Decimal(request.form["subject_pass_threshold"])
+            overall_th = Decimal(request.form["overall_pass_threshold"])
+        except Exception:
+            flash("قيم غير صالحة لعتبات النجاح.", "danger")
+            return redirect(url_for("results.settings"))
+        if subj_th < 1 or subj_th > 100 or overall_th < 1 or overall_th > 100:
+            flash(
+                "عتبات النجاح يجب أن تكون بين 1 و 100. "
+                "قيمة صفر تُلغي الرسوب فعليًا وتجعل جميع الطلاب ناجحين.",
+                "danger",
+            )
+            return redirect(url_for("results.settings"))
+        method = request.form.get("method") or "overall_only"
+        if method not in ("overall_only", "per_subject", "mixed"):
+            flash("طريقة النجاح غير معروفة.", "danger")
+            return redirect(url_for("results.settings"))
+        allowed_failed = int(request.form.get("allowed_failed_subjects") or 0)
+        if allowed_failed < 0:
+            allowed_failed = 0
+        rule.subject_pass_threshold = subj_th
+        rule.overall_pass_threshold = overall_th
+        rule.method = method
+        rule.allowed_failed_subjects = allowed_failed
         db.session.commit()
         flash("تم حفظ قاعدة النجاح.", "success")
         return redirect(url_for("results.settings"))
@@ -155,28 +183,33 @@ def grades_index():
         )
         subjects_q = Subject.query.filter_by(school_id=_sid())
 
-        # Sprint 9 TC-7.3.3: teacher sees only their assigned (section, subject) pairs.
-        teacher = _teacher_for_current_user()
-        if teacher:
-            assignments = Assignment.query.filter_by(
-                teacher_id=teacher.id, year_id=year.id, is_active=True,
-            ).all()
-            assigned_section_ids = {a.section_id for a in assignments}
-            assigned_subject_ids = {a.subject_id for a in assignments}
-            if not assignments:
-                sections = subjects = []
-            else:
-                sections = (
-                    sections_q.filter(Section.id.in_(assigned_section_ids))
-                    .order_by(Grade.order_index, Section.name).all()
-                )
-                subjects = (
-                    subjects_q.filter(Subject.id.in_(assigned_subject_ids))
-                    .order_by(Subject.name).all()
-                )
-        else:
+        # Sprint 9 TC-7.3.3 (hardened Sprint 10): admins see everything;
+        # non-admins see ONLY their assigned (section, subject) pairs.
+        # Non-admin without a Teacher record → empty (was leaking as admin).
+        if _is_admin():
             sections = sections_q.order_by(Grade.order_index, Section.name).all()
             subjects = subjects_q.order_by(Subject.name).all()
+        else:
+            teacher = _teacher_for_current_user()
+            if not teacher:
+                sections = subjects = []
+            else:
+                assignments = Assignment.query.filter_by(
+                    teacher_id=teacher.id, year_id=year.id, is_active=True,
+                ).all()
+                assigned_section_ids = {a.section_id for a in assignments}
+                assigned_subject_ids = {a.subject_id for a in assignments}
+                if not assignments:
+                    sections = subjects = []
+                else:
+                    sections = (
+                        sections_q.filter(Section.id.in_(assigned_section_ids))
+                        .order_by(Grade.order_index, Section.name).all()
+                    )
+                    subjects = (
+                        subjects_q.filter(Subject.id.in_(assigned_subject_ids))
+                        .order_by(Subject.name).all()
+                    )
 
         terms = Term.query.filter_by(school_id=_sid(), year_id=year.id).order_by(Term.order_index).all()
     return render_template(
@@ -193,14 +226,16 @@ def grade_sheet(section_id, term_id, subject_id):
     term = _get(Term, term_id)
     subject = _get(Subject, subject_id)
 
-    # Sprint 9 TC-7.3.3: teachers can only grade sections/subjects they're assigned to.
-    teacher = _teacher_for_current_user()
-    if teacher and not _teacher_can_grade(teacher, section, subject):
-        flash(
-            "لا تملك صلاحية رصد درجات هذه المادة لهذا الفصل — يمكنك رصد درجات المواد المسندة إليك فقط.",
-            "danger",
-        )
-        return redirect(url_for("results.grades_index"))
+    # Sprint 9 TC-7.3.3 (hardened Sprint 10): non-admins must have an
+    # active Assignment for this exact (section, subject) pair.
+    if not _is_admin():
+        teacher = _teacher_for_current_user()
+        if not teacher or not _teacher_can_grade(teacher, section, subject):
+            flash(
+                "لا تملك صلاحية رصد درجات هذه المادة لهذا الفصل — يمكنك رصد درجات المواد المسندة إليك فقط.",
+                "danger",
+            )
+            return redirect(url_for("results.grades_index"))
 
     locked = YearResult.query.join(Enrollment).filter(
         Enrollment.section_id == section.id,
@@ -500,20 +535,30 @@ def _compute_year(enrollment, terms, subjects, rule: PassRule):
         sum((s for _, s in subj_scores), Decimal(0)) / Decimal(len(subj_scores))
         if subj_scores else Decimal(0)
     )
-    failed = [(s, sc) for s, sc in subj_scores if sc < rule.subject_pass_threshold]
+    # Sprint 10 hotfix — defensive floor of 1 for either threshold.
+    # A stored 0 was making every student pass under per_subject / overall_only
+    # (0 >= 0 = True; 0 < 0 = False). Settings form now blocks saving zero,
+    # but any historical DB rows with 0 also get corrected here.
+    subj_th = rule.subject_pass_threshold or Decimal(1)
+    if subj_th < Decimal(1):
+        subj_th = Decimal(1)
+    overall_th = rule.overall_pass_threshold or Decimal(1)
+    if overall_th < Decimal(1):
+        overall_th = Decimal(1)
+    failed = [(s, sc) for s, sc in subj_scores if sc < subj_th]
 
     if incomplete:
         status = "incomplete"
     else:
-        method = rule.method
+        method = rule.method or "overall_only"
         if method == "overall_only":
-            status = "pass" if average >= rule.overall_pass_threshold else "fail"
+            status = "pass" if average >= overall_th else "fail"
         elif method == "per_subject":
             status = "fail" if failed else "pass"
         else:  # mixed
-            if average < rule.overall_pass_threshold:
+            if average < overall_th:
                 status = "fail"
-            elif len(failed) <= rule.allowed_failed_subjects:
+            elif len(failed) <= (rule.allowed_failed_subjects or 0):
                 status = "pass"
             else:
                 status = "fail"
