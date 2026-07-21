@@ -34,7 +34,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/children/:id',
         builder: (_, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ChildDetailScreen(childId: id);
+          // Sprint 10 audit — support ?tab=attendance for FCM deep-links.
+          final tab = tabIndexFromName(state.uri.queryParameters['tab']);
+          return ChildDetailScreen(childId: id, initialTab: tab);
+        },
+      ),
+      // Sprint 10 audit — dedicated sub-paths so FCM push data.route matches:
+      //   /children/<id>/attendance
+      //   /children/<id>/results
+      //   /children/<id>/invoices
+      //   /children/<id>/materials
+      //   /children/<id>/notifications
+      GoRoute(
+        path: '/children/:id/:tab',
+        builder: (_, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final tab = tabIndexFromName(state.pathParameters['tab']);
+          return ChildDetailScreen(childId: id, initialTab: tab);
         },
       ),
     ],

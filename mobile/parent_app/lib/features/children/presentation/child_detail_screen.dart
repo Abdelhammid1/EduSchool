@@ -11,9 +11,28 @@ import '../../results/presentation/child_results_tab.dart';
 import '../../schedule/presentation/child_schedule_tab.dart';
 import '../data/children_repository.dart';
 
+/// Tab index enum kept in sync with the tabs list below.
+/// Sprint 10 audit fix — FCM deep-links target /children/:id/<tabName>
+/// so the router maps a sub-path to the initialIndex here.
+const _tabByName = <String, int>{
+  'schedule': 0,
+  'attendance': 1,
+  'results': 2,
+  'invoices': 3,
+  'materials': 4,
+  'notifications': 5,
+};
+
+int tabIndexFromName(String? name) => _tabByName[name] ?? 0;
+
 class ChildDetailScreen extends ConsumerWidget {
   final int childId;
-  const ChildDetailScreen({super.key, required this.childId});
+  final int initialTab;
+  const ChildDetailScreen({
+    super.key,
+    required this.childId,
+    this.initialTab = 0,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,6 +47,7 @@ class ChildDetailScreen extends ConsumerWidget {
 
     return DefaultTabController(
       length: 6,
+      initialIndex: initialTab.clamp(0, 5),
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
