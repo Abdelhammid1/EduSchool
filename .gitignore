@@ -26,3 +26,8 @@ app/static/uploads/materials/
 manasety-fcm-service-account.json
 mobile/*/ios/Runner/GoogleService-Info.plist
 mobile/*/android/app/google-services.json
+
+# Android upload keystore passwords — never commit
+mobile/*/android/key.properties
+*.jks
+*.keystore
