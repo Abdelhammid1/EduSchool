@@ -11,6 +11,8 @@ class Env {
 
   static String get apiBase {
     if (_override.isNotEmpty) return _override;
+    // Release builds (Xcode Cloud, Play Store) always target production.
+    if (kReleaseMode) return 'https://school.manasety.ai/api';
     if (kIsWeb) return 'http://localhost:5050/api';
     if (Platform.isAndroid) return 'http://10.0.2.2:5050/api';
     return 'http://localhost:5050/api';
