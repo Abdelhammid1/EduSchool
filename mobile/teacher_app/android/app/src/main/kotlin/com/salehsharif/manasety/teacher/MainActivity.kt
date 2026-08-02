@@ -1,4 +1,4 @@
-package com.salehsharif.manasety.manasety_teacher
+package com.salehsharif.manasety.teacher
 
 import io.flutter.embedding.android.FlutterActivity
 

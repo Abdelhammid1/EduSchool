@@ -1,4 +1,4 @@
-package com.salehsharif.manasety.manasety_parent
+package com.salehsharif.manasety.parent
 
 import io.flutter.embedding.android.FlutterActivity
 

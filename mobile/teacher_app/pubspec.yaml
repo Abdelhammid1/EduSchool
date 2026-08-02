@@ -1,7 +1,7 @@
 name: manasety_teacher
 description: تطبيق المعلم — منصتي (مؤسسة الشيخ صالح الشريف للتعليم القرآني)
 publish_to: 'none'
-version: 0.2.0+1
+version: 0.2.1+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
