@@ -83,7 +83,7 @@ def _upsert_user(
         )
         db.session.add(user)
         created = True
-        print(f"＋ Creating '{username}' in '{school.name_ar or school.name}'.")
+        print(f"＋ Creating '{username}' in '{school.name}'.")
 
     user.role_id = role.id
     user.is_active = True
