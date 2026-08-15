@@ -1,25 +1,23 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
-
 /// نقطة وصول الـ API.
-/// - في الإنتاج: مرّر --dart-define=API_BASE=https://school.manasety.ai/api
-/// - على المحاكي: يختار العنوان تلقائيًا حسب المنصّة
-///   • iOS Simulator/جهاز iOS يقاسم شبكة الـ Mac ⇒ localhost:5050
-///   • Android Emulator يستخدم الاسم المستعار 10.0.2.2:5050
+///
+/// Day 13 (v3) — default is the deployed backend for **all** builds (debug
+/// and release, physical device and emulator). Point at localhost only when
+/// you're actively developing against a local Flask instance:
+///
+///     flutter run --dart-define=API_BASE=http://localhost:5050/api
+///
+/// On a physical Android device with a local Flask, also run:
+///
+///     adb reverse tcp:5050 tcp:5050
+///
+/// so `localhost:5050` on the phone bridges to your workstation.
 class Env {
   static const String _override =
       String.fromEnvironment('API_BASE', defaultValue: '');
 
   static String get apiBase {
     if (_override.isNotEmpty) return _override;
-    // Release builds (Xcode Cloud, Play Store) always target production.
-    if (kReleaseMode) return 'https://school.manasety.ai/api';
-    // Web (dev) falls back to localhost — same origin as `flutter run -d chrome`.
-    if (kIsWeb) return 'http://localhost:5050/api';
-    if (Platform.isAndroid) return 'http://10.0.2.2:5050/api';
-    // iOS Simulator, iOS device on same LAN, macOS — Mac's localhost.
-    return 'http://localhost:5050/api';
+    return 'https://school.manasety.ai/api';
   }
 
   static const String appFlavor = 'teacher';

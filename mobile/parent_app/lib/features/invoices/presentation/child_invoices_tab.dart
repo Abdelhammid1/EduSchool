@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../shared/models/invoice_summary.dart';
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/status_chip.dart';
 import '../data/invoices_repository.dart';
 
 class ChildInvoicesTab extends ConsumerWidget {
@@ -26,12 +23,15 @@ class ChildInvoicesTab extends ConsumerWidget {
         onRetry: () => ref.invalidate(childInvoicesProvider(childId)),
         data: (list) {
           if (list.isEmpty) {
-            return const EmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'لا توجد فواتير',
+            return const RefreshableEmpty(
+              child: EmptyState(
+                icon: Icons.receipt_long_outlined,
+                illustration: EmptyIllustration(kind: ManasetyEmpty.receipt),
+                title: 'لا توجد فواتير',
+              ),
             );
           }
-          // Sort by status priority then date
+          // Sort by status priority then date.
           const order = {'overdue': 0, 'partial': 1, 'pending': 2, 'paid': 3};
           final sorted = [...list]..sort((a, b) {
               final pa = order[a.status] ?? 99;
@@ -42,8 +42,8 @@ class ChildInvoicesTab extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: sorted.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => _InvoiceCard(invoice: sorted[i]),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (_, i) => _InvoiceRibbon(invoice: sorted[i]),
           );
         },
       ),
@@ -51,11 +51,31 @@ class ChildInvoicesTab extends ConsumerWidget {
   }
 }
 
-class _InvoiceCard extends StatelessWidget {
+/// Day 6 — invoice card as a ribbon:
+///   • colored top band signaling status at a glance
+///   • giant threshold-colored المتبقّي as the hero
+///   • horizontal paid-progress bar
+///   • compact الإجمالي / المدفوع row + issue/due dates as muted footer
+class _InvoiceRibbon extends StatelessWidget {
   final InvoiceSummary invoice;
-  const _InvoiceCard({required this.invoice});
+  const _InvoiceRibbon({required this.invoice});
 
-  StatusKind get _kind {
+  Color _statusColor(BuildContext context) {
+    switch (invoice.status) {
+      case 'paid':
+        return AppColors.success;
+      case 'partial':
+        return AppColors.gold;
+      case 'overdue':
+        return AppColors.danger;
+      case 'pending':
+        return AppColors.navy;
+      default:
+        return context.tokens.muted;
+    }
+  }
+
+  StatusKind get _statusKind {
     switch (invoice.status) {
       case 'paid':
         return StatusKind.success;
@@ -70,58 +90,107 @@ class _InvoiceCard extends StatelessWidget {
     }
   }
 
+  double get _paidPct {
+    final total = invoice.totalAmount;
+    if (total <= 0) return 0;
+    return (invoice.paidAmount / total).clamp(0.0, 1.0);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
+    final statusColor = _statusColor(context);
     final df = DateFormat.yMMMMd('ar');
     final money = NumberFormat.currency(
       locale: 'ar',
       symbol: 'ج.س',
       decimalDigits: 0,
     );
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: t.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: t.border),
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    invoice.number,
-                    style: const TextStyle(
-                      color: AppColors.navy,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
+            // Colored status band on top.
+            Container(height: 6, color: statusColor),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Number + status chip row.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          arabize(invoice.number),
+                          style: TextStyle(
+                            color: t.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      StatusChip(label: invoice.statusAr, kind: _statusKind),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // Hero: giant remaining amount.
+                  Text(
+                    'المتبقّي',
+                    style: TextStyle(color: t.muted, fontSize: 11),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    arabize(money.format(invoice.remaining)),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
-                ),
-                StatusChip(label: invoice.statusAr, kind: _kind),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'إصدار: ${df.format(invoice.issueDate)} • استحقاق: ${df.format(invoice.dueDate)}',
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-            const Divider(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: _stat('الإجمالي', money.format(invoice.totalAmount),
-                      AppColors.ink),
-                ),
-                Expanded(
-                  child: _stat('المدفوع', money.format(invoice.paidAmount),
-                      AppColors.success),
-                ),
-                Expanded(
-                  child: _stat('المتبقّي', money.format(invoice.remaining),
-                      invoice.remaining > 0
-                          ? AppColors.danger
-                          : AppColors.muted),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  // Paid-percentage progress bar.
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      height: 8,
+                      color: t.subtleBg,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: FractionallySizedBox(
+                          widthFactor: _paidPct,
+                          child: Container(color: statusColor),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Totals row.
+                  Row(
+                    children: [
+                      _kv(context, 'الإجمالي', arabize(money.format(invoice.totalAmount)), t.ink),
+                      const SizedBox(width: 18),
+                      _kv(context, 'المدفوع', arabize(money.format(invoice.paidAmount)), AppColors.success),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Dates footer.
+                  Text(
+                    arabize('إصدار: ${df.format(invoice.issueDate)}   •   استحقاق: ${df.format(invoice.dueDate)}'),
+                    style: TextStyle(color: t.muted, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -129,21 +198,22 @@ class _InvoiceCard extends StatelessWidget {
     );
   }
 
-  Widget _stat(String label, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _kv(BuildContext context, String k, String v, Color valueColor) {
+    final t = context.tokens;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          '$k ',
+          style: TextStyle(color: t.muted, fontSize: 12),
         ),
-        const SizedBox(height: 2),
         Text(
-          value,
+          v,
           style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w700,
+            color: valueColor,
             fontSize: 13,
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],

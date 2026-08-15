@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/material_card.dart';
+import '../../../core/env.dart';
 import '../data/materials_repository.dart';
 
 class ChildMaterialsTab extends ConsumerWidget {
@@ -23,17 +22,23 @@ class ChildMaterialsTab extends ConsumerWidget {
         onRetry: () => ref.invalidate(childMaterialsProvider(childId)),
         data: (list) {
           if (list.isEmpty) {
-            return const EmptyState(
-              icon: Icons.collections_bookmark_outlined,
-              title: 'لا توجد مواد منشورة',
-              description: 'سيظهر هنا أي ملف أو رابط ينشره معلّمو الفصل.',
+            return const RefreshableEmpty(
+              child: EmptyState(
+                icon: Icons.collections_bookmark_outlined,
+                illustration: EmptyIllustration(kind: ManasetyEmpty.bookmark),
+                title: 'لا توجد مواد منشورة',
+                description: 'سيظهر هنا أي ملف أو رابط ينشره معلّمو الفصل.',
+              ),
             );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: list.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => MaterialCard(item: list[i]),
+            itemBuilder: (_, i) => MaterialCard(
+              item: list[i],
+              fileBaseUrl: Env.apiBase.replaceAll('/api', ''),
+            ),
           );
         },
       ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/colors.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../materials/presentation/section_materials_tab.dart';
 import '../../schedule/presentation/section_schedule_tab.dart';
 import '../../students/presentation/section_students_tab.dart';

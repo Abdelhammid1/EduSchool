@@ -5,7 +5,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../env.dart';
 import '../storage/secure_storage.dart';
-import 'api_exception.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 
 /// المزوّد العام لـ Dio بعد ربط الـ interceptors.
 final dioProvider = Provider<Dio>((ref) {
@@ -85,7 +85,7 @@ class _ErrorInterceptor extends Interceptor {
     } else if (body is Map && body['message'] is String) {
       serverMsg = body['message'] as String;
     }
-    if (status == 401) return UnauthorizedException(serverMsg ?? 'انتهت الجلسة، يرجى إعادة الدخول');
+    if (status == 401) return UnauthorizedException(serverMsg ?? 'انتهت جلستك — يرجى إعادة تسجيل الدخول');
     if (status == 403) return ForbiddenException(serverMsg ?? 'لا تملك صلاحية');
     if (status == 404) return NotFoundException(serverMsg ?? 'غير موجود');
     if (status >= 400 && status < 500) return ValidationException(serverMsg ?? 'بيانات غير صحيحة');

@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_exception.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/endpoints.dart';
-import '../../../core/theme/colors.dart';
-
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
   @override
@@ -45,7 +43,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم تغيير كلمة المرور بنجاح'),
+          content: Text('تمّ تغيير كلمة المرور — سجّل الدخول بها في المرة القادمة ✓'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -80,6 +78,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 decoration: InputDecoration(
                   labelText: 'كلمة المرور الحالية',
                   suffixIcon: IconButton(
+                    tooltip: _hideOld
+                        ? 'إظهار كلمة المرور'
+                        : 'إخفاء كلمة المرور',
                     icon: Icon(_hideOld
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined),
@@ -95,6 +96,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 decoration: InputDecoration(
                   labelText: 'كلمة المرور الجديدة (٨ أحرف على الأقل)',
                   suffixIcon: IconButton(
+                    tooltip: _hideNew
+                        ? 'إظهار كلمة المرور'
+                        : 'إخفاء كلمة المرور',
                     icon: Icon(_hideNew
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined),

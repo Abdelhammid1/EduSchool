@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/endpoints.dart';
-import '../../../shared/models/schedule_slot.dart';
-
+import 'package:manasety_ui/manasety_ui.dart';
 final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
   return ScheduleRepository(ref.watch(dioProvider));
 });

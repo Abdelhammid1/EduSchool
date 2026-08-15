@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 
-import '../../../core/theme/colors.dart';
+import '../../notifications/data/notifications_repository.dart';
 import '../../notifications/presentation/notifications_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../schedule/presentation/teacher_schedule_screen.dart';
 import '../../sections/presentation/sections_screen.dart';
 
-class MainScaffold extends StatefulWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
 
   @override
-  State<MainScaffold> createState() => _MainScaffoldState();
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> {
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
   int _idx = 0;
 
   static const _titles = ['فصولي', 'الجدول الأسبوعي', 'الإشعارات', 'الحساب'];
 
   @override
   Widget build(BuildContext context) {
+    // Day 7 — unread count drives the bell badge.
+    final notifs = ref.watch(teacherNotificationsProvider);
+    final unread = notifs.valueOrNull
+            ?.where((n) => n.status != 'read')
+            .length ??
+        0;
+
     return Scaffold(
       appBar: AppBar(title: Text(_titles[_idx])),
       body: IndexedStack(
@@ -33,29 +43,42 @@ class _MainScaffoldState extends State<MainScaffold> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _idx,
-        onDestinationSelected: (i) => setState(() => _idx = i),
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.sky.withValues(alpha: 0.5),
-        destinations: const [
+        onDestinationSelected: (i) {
+          HapticFeedback.selectionClick();
+          setState(() => _idx = i);
+        },
+        // Both bg + selected-icon colors flow from the theme so the bar adapts
+        // to dark mode automatically (no more baked-white bar on dark scaffold).
+        backgroundColor: context.tokens.surface,
+        indicatorColor: context.tokens.accentBg,
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.class_outlined),
-            selectedIcon: Icon(Icons.class_, color: AppColors.navy),
+            icon: const Icon(Icons.class_outlined),
+            selectedIcon: Icon(Icons.class_, color: Theme.of(context).colorScheme.primary),
             label: 'الفصول',
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_view_week_outlined),
+            icon: const Icon(Icons.calendar_view_week_outlined),
             selectedIcon:
-                Icon(Icons.calendar_view_week, color: AppColors.navy),
+                Icon(Icons.calendar_view_week, color: Theme.of(context).colorScheme.primary),
             label: 'الجدول',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications, color: AppColors.navy),
+            icon: Badge.count(
+              count: unread,
+              isLabelVisible: unread > 0,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            selectedIcon: Badge.count(
+              count: unread,
+              isLabelVisible: unread > 0,
+              child: Icon(Icons.notifications, color: Theme.of(context).colorScheme.primary),
+            ),
             label: 'الإشعارات',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.navy),
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
             label: 'الحساب',
           ),
         ],

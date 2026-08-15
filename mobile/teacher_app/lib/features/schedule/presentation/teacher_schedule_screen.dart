@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/weekly_schedule_grid.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../data/schedule_repository.dart';
 
 class TeacherScheduleScreen extends ConsumerWidget {

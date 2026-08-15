@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:manasety_parent/core/theme/app_theme.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import 'package:manasety_parent/features/auth/presentation/login_screen.dart';
 
 void main() {

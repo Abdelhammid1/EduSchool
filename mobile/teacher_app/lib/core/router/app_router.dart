@@ -11,7 +11,8 @@ import '../../features/home/presentation/main_scaffold.dart';
 import '../../features/materials/presentation/upload_material_screen.dart';
 import '../../features/profile/presentation/change_password_screen.dart';
 import '../../features/sections/presentation/section_detail_screen.dart';
-import '../theme/colors.dart';
+import '../../features/splash/presentation/welcome_splash_screen.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -19,18 +20,22 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(authNotifier.dispose);
 
   return GoRouter(
-    initialLocation: Routes.home,
+    initialLocation: Routes.welcome,
     refreshListenable: authNotifier,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       final loc = state.matchedLocation;
       if (auth is AuthBooting) return null;
+      // Day 13 (v3) — the welcome splash owns navigation for its own
+      // lifetime; don't redirect away while it's showing.
+      if (loc == Routes.welcome) return null;
       final loggedIn = auth is Authenticated;
       if (!loggedIn && loc != Routes.login) return Routes.login;
       if (loggedIn && loc == Routes.login) return Routes.home;
       return null;
     },
     routes: [
+      GoRoute(path: Routes.welcome, builder: (_, __) => const WelcomeSplashScreen()),
       GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
       GoRoute(path: Routes.home, builder: (_, __) => const MainScaffold()),
       GoRoute(

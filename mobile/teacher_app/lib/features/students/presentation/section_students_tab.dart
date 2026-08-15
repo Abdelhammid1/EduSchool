@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/colors.dart';
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/empty_state.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../data/students_repository.dart';
 
 class SectionStudentsTab extends ConsumerWidget {
@@ -23,9 +21,12 @@ class SectionStudentsTab extends ConsumerWidget {
         onRetry: () => ref.invalidate(sectionStudentsProvider(sectionId)),
         data: (list) {
           if (list.isEmpty) {
-            return const EmptyState(
-              icon: Icons.group_outlined,
-              title: 'لا يوجد طلاب في هذا الفصل',
+            return const RefreshableEmpty(
+              child: EmptyState(
+                icon: Icons.group_outlined,
+                illustration: EmptyIllustration(kind: ManasetyEmpty.family),
+                title: 'لا يوجد طلاب في هذا الفصل',
+              ),
             );
           }
           return ListView.separated(
@@ -40,7 +41,7 @@ class SectionStudentsTab extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   leading: CircleAvatar(
                     backgroundColor: AppColors.sky.withValues(alpha: 0.5),
-                    foregroundColor: AppColors.navy,
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     child: Text(
                       '${i + 1}',
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -48,14 +49,14 @@ class SectionStudentsTab extends ConsumerWidget {
                   ),
                   title: Text(
                     s.fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
+                      color: context.tokens.ink,
                     ),
                   ),
                   subtitle: Text(
                     'الرقم الدائم: ${s.permanentCode}',
-                    style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                    style: TextStyle(color: context.tokens.muted, fontSize: 12),
                   ),
                 ),
               );
