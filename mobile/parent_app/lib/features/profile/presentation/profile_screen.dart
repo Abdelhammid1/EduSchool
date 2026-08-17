@@ -123,7 +123,7 @@ class ProfileScreen extends ConsumerWidget {
                 builder: (context, snap) {
                   final v = snap.data?.version ?? '…';
                   return Text(
-                    'منصتي لولي الأمر • الإصدار $v',
+                    'بوابة ولي الأمر • الإصدار $v',
                     style: TextStyle(color: context.tokens.muted, fontSize: 11),
                   );
                 },

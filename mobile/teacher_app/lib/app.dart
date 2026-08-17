@@ -15,7 +15,7 @@ class ManasetyApp extends ConsumerWidget {
     // Sprint 10 Phase 3 — deep-link tapped push notifications through the router
     FcmService.bindRouter(router);
     return MaterialApp.router(
-      title: 'منصتي للمعلم',
+      title: 'بوابة المعلم',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

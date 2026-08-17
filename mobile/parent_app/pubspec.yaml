@@ -1,5 +1,5 @@
 name: manasety_parent
-description: تطبيق ولي الأمر — منصتي (مؤسسة الشيخ صالح الشريف للتعليم القرآني)
+description: بوابة ولي الأمر — مدارس الشيخ صالح الشريف للتعليم القرآني
 publish_to: 'none'
 # Day 13 — release-polish sprint bumped to 0.3.0. Version string in the
 # profile screen is now read at runtime from `package_info_plus` so this

@@ -8,8 +8,8 @@ class LocalNotifications {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static const _channelId = 'manasety_default';
-  static const _channelName = 'منصتي';
+  static const _channelId = 'manasety_default'; // ID stable — renaming would reset users' per-channel settings
+  static const _channelName = 'بوابة ولي الأمر';
   static const _channelDesc = 'إشعارات مؤسسة الشيخ صالح الشريف للتعليم القرآني';
 
   static Future<void> init() async {

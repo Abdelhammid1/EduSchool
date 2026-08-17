@@ -101,7 +101,7 @@ class ProfileScreen extends ConsumerWidget {
               builder: (context, snap) {
                 final v = snap.data?.version ?? '…';
                 return Text(
-                  'منصتي للمعلم • الإصدار $v',
+                  'بوابة المعلم • الإصدار $v',
                   style: TextStyle(color: context.tokens.muted, fontSize: 11),
                 );
               },

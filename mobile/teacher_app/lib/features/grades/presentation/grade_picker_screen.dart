@@ -27,7 +27,7 @@ class _GradePickerScreenState extends ConsumerState<GradePickerScreen> {
     final sectionsAsync = ref.watch(sectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('اختيار الفترة والمادة والمكون')),
+      appBar: AppBar(title: const Text('رصد الدرجات')),
       body: AsyncValueWidget<List<Term>>(
         value: termsAsync,
         onRetry: () => ref.invalidate(termsProvider),

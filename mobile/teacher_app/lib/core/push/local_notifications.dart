@@ -9,7 +9,7 @@ class LocalNotifications {
   static bool _initialized = false;
 
   static const _channelId = 'manasety_default';
-  static const _channelName = 'منصتي';
+  static const _channelName = 'بوابة المعلم';
   static const _channelDesc = 'إشعارات مؤسسة الشيخ صالح الشريف للتعليم القرآني';
 
   static Future<void> init() async {
