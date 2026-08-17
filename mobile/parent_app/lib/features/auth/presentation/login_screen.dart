@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../../core/env.dart';
-import '../../../core/theme/colors.dart';
-import '../../../shared/widgets/manasety_logo.dart';
 import '../application/auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -43,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _err = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _err = 'تعذّر تسجيل الدخول');
+      setState(() => _err = 'لم نتمكن من تسجيل دخولك — تحقق من الاتصال وحاول مجددًا');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -56,13 +54,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.navy,
-      body: SafeArea(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const ArabesqueBackground(),
+          SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Card(
+                color: Colors.white,
+                surfaceTintColor: Colors.white,
+                elevation: 4,
+                shadowColor: Colors.black45,
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Form(
@@ -71,17 +77,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Center(
-                          child: ManasetyLogo(
-                            variant: ManasetyLogoVariant.vertical,
-                            size: 160,
+                        // Day 12 hot-fix — the raw 160-dp image sat awkwardly
+                        // as a bare rectangle over a white card. Present it
+                        // as a soft round medallion with a gold ring + drop
+                        // shadow so the brand mark reads as a "seal" rather
+                        // than a loose asset.
+                        Center(
+                          child: Container(
+                            width: 132,
+                            height: 132,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.gold, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.navy.withValues(alpha: 0.10),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const ManasetyLogo(
+                              variant: ManasetyLogoVariant.emblem,
+                              size: 104,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 14),
                         Container(
                           height: 3,
                           width: 56,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          margin: const EdgeInsets.symmetric(vertical: 6),
                           decoration: BoxDecoration(
                             color: AppColors.gold,
                             borderRadius: BorderRadius.circular(2),
@@ -122,9 +150,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _userCtrl,
                           autofillHints: const [AutofillHints.username],
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'اسم المستخدم',
-                          ),
+                          style: const TextStyle(color: AppColors.ink),
+                          decoration: _lightInput('اسم المستخدم'),
                           validator: (v) => (v == null || v.trim().isEmpty)
                               ? 'مطلوب'
                               : null,
@@ -135,9 +162,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           obscureText: _hidePass,
                           autofillHints: const [AutofillHints.password],
                           textInputAction: TextInputAction.done,
-                          decoration: InputDecoration(
-                            labelText: 'كلمة المرور',
+                          style: const TextStyle(color: AppColors.ink),
+                          decoration: _lightInput('كلمة المرور').copyWith(
                             suffixIcon: IconButton(
+                              tooltip: _hidePass
+                                  ? 'إظهار كلمة المرور'
+                                  : 'إخفاء كلمة المرور',
                               icon: Icon(
                                 _hidePass
                                     ? Icons.visibility_outlined
@@ -175,11 +205,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+          ),
+        ],  // Stack children
+      ),
+    );
+  }
+
+  /// Explicit light-mode input decoration — the login card is always white,
+  /// so we override the app-level (possibly dark) InputDecorationTheme.
+  InputDecoration _lightInput(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.white,
+      labelStyle: const TextStyle(color: AppColors.muted),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.navy, width: 1.6),
       ),
     );
   }
 
   Widget _flash(String msg, {required Color color}) {
+    // Day 12 hot-fix — text used the same [color] as the tint background;
+    // gold flashes were essentially invisible. Lerp toward ink for legibility
+    // while keeping [color] on the bg tint + border so the intent still reads.
+    final textColor = Color.lerp(AppColors.ink, color, 0.35)!;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -189,7 +249,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       child: Text(
         msg,
-        style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
   }

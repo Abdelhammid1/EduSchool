@@ -24,6 +24,15 @@ class NotificationsRepository {
       throw toApi(e);
     }
   }
+
+  /// Day 7 — mark a single notification as read server-side.
+  Future<void> markRead(int id) async {
+    try {
+      await _dio.post(Endpoints.notificationRead(id));
+    } catch (_) {
+      // Silently ignore — the UI already updated optimistically.
+    }
+  }
 }
 
 final parentNotificationsProvider =

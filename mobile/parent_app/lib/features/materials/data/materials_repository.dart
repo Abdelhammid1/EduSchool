@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/dio_client.dart';
 import '../../../core/api/endpoints.dart';
-import '../../../shared/models/material_item.dart';
-
+import 'package:manasety_ui/manasety_ui.dart';
 final materialsRepositoryProvider = Provider<MaterialsRepository>((ref) {
   return MaterialsRepository(ref.watch(dioProvider));
 });

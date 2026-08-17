@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/theme/colors.dart';
-import '../../../shared/widgets/async_value_widget.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../students/data/students_repository.dart';
 import '../application/grades_form_controller.dart';
 
@@ -83,8 +81,8 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
       final saved = result['saved'] ?? 0;
       final rejected = result['rejected'] ?? 0;
       final msg = rejected > 0
-          ? 'تم حفظ $saved درجة • رُفض $rejected'
-          : 'تم حفظ $saved درجة';
+          ? 'تمّ إرسال $saved درجة بنجاح ✓ • رُفض $rejected'
+          : 'تمّ إرسال $saved درجة بنجاح ✓';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -109,7 +107,8 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
         title: Text(widget.componentName),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(left: 12),
+            // Day 13 — direction-blind `left:` → `EdgeInsetsDirectional.start:`
+            padding: const EdgeInsetsDirectional.only(start: 12),
             child: Center(
               child: Text('/${_fmt(widget.maxScore)}',
                   style: const TextStyle(
@@ -124,20 +123,31 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
         data: (state) {
           return studentsAsync.when(
             data: (students) {
+              // Day 13 — if a section has zero students, the old build
+              // rendered an empty ListView + a dangling حفظ button. Show a
+              // proper EmptyState instead so the teacher isn't confused.
+              if (students.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.group_outlined,
+                  illustration: EmptyIllustration(kind: ManasetyEmpty.family),
+                  title: 'لا يوجد طلاب في هذا الفصل',
+                  description: 'اطلب من الإدارة تسجيل الطلاب قبل رصد الدرجات.',
+                );
+              }
               return Column(
                 children: [
                   Container(
-                    color: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: context.tokens.border)),
                     ),
                     child: Row(
                       children: [
                         Text(
                           'تمّ إدخال ${state.entered} / ${state.totalStudents} طالب',
-                          style: const TextStyle(
-                              color: AppColors.navy, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
@@ -153,9 +163,12 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
                         final invalid = state.isInvalid(s.enrollmentId);
                         final dirty = state.isDirty(s.enrollmentId);
                         return Container(
+                          // Day 13 — dirty rail was `right:` (physical). In RTL
+                          // it should sit on the trailing edge; BorderDirectional
+                          // handles that per locale.
                           decoration: BoxDecoration(
-                            border: Border(
-                              right: BorderSide(
+                            border: BorderDirectional(
+                              end: BorderSide(
                                 color: dirty ? AppColors.gold : Colors.transparent,
                                 width: 4,
                               ),
@@ -169,7 +182,7 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
                                 radius: 14,
                                 backgroundColor:
                                     AppColors.sky.withValues(alpha: 0.5),
-                                foregroundColor: AppColors.navy,
+                                foregroundColor: Theme.of(context).colorScheme.primary,
                                 child: Text('${i + 1}', style: const TextStyle(
                                     fontSize: 12, fontWeight: FontWeight.w700)),
                               ),
@@ -178,11 +191,11 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(s.fullName, style: const TextStyle(
+                                    Text(s.fullName, style: TextStyle(
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.ink)),
-                                    Text(s.permanentCode, style: const TextStyle(
-                                        color: AppColors.muted, fontSize: 11)),
+                                        color: context.tokens.ink)),
+                                    Text(s.permanentCode, style: TextStyle(
+                                        color: context.tokens.muted, fontSize: 11)),
                                   ],
                                 ),
                               ),
@@ -206,7 +219,7 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
                                       borderSide: BorderSide(
                                         color: invalid
                                             ? AppColors.danger
-                                            : AppColors.border,
+                                            : context.tokens.border,
                                       ),
                                     ),
                                   ),
@@ -239,8 +252,8 @@ class _GradeEntryScreenState extends ConsumerState<GradeEntryScreen> {
                 ],
               );
             },
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.navy)),
+            loading: () => Center(
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
             error: (e, _) => Padding(
                 padding: const EdgeInsets.all(24),
                 child: Center(child: Text('$e'))),

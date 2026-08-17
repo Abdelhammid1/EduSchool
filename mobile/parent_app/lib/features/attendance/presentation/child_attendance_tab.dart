@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../shared/models/attendance.dart';
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/status_chip.dart';
 import '../data/attendance_repository.dart';
 
+/// Attendance tab — Day 5 shape: hero donut → stat strip → month grid →
+/// recent-records list. Turns raw attendance records into a glanceable
+/// dashboard the parent can read without scanning individual dates.
 class ChildAttendanceTab extends ConsumerWidget {
   final int childId;
   const ChildAttendanceTab({super.key, required this.childId});
@@ -25,99 +25,99 @@ class ChildAttendanceTab extends ConsumerWidget {
         value: att,
         onRetry: () => ref.invalidate(childAttendanceProvider(childId)),
         data: (data) {
+          if (data.records.isEmpty) {
+            return const RefreshableEmpty(
+              child: EmptyState(
+                icon: Icons.event_available,
+                illustration: EmptyIllustration(kind: ManasetyEmpty.calendar),
+                title: 'لا توجد سجلات حضور بعد',
+              ),
+            );
+          }
+          final s = data.summary;
+          final cells = data.records
+              .map((r) => AttendanceCell(
+                    date: r.date,
+                    status: _statusStr(r.status),
+                  ))
+              .toList();
+          final recent = [...data.records]
+            ..sort((a, b) => b.date.compareTo(a.date));
+
           return ListView(
-            padding: const EdgeInsets.all(16),
             physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
             children: [
-              _SummaryCard(s: data.summary),
-              const SizedBox(height: 16),
-              if (data.records.isEmpty)
-                const EmptyState(
-                  icon: Icons.event_available,
-                  title: 'لا توجد سجلات حضور بعد',
-                )
-              else
-                ...data.records.map((r) => _AttendanceTile(record: r)),
+              // Hero: donut + tally strip.
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: context.tokens.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: context.tokens.border),
+                ),
+                child: Column(
+                  children: [
+                    AttendanceDonut(
+                      present: s.present,
+                      absent: s.absent,
+                      late: s.late,
+                      total: s.total,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _tally(context, arabize(s.present), 'حاضر', AppColors.success)),
+                        Expanded(child: _tally(context, arabize(s.absent), 'غائب', AppColors.danger)),
+                        Expanded(child: _tally(context, arabize(s.late), 'متأخّر', AppColors.goldInk)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Month grid.
+              const _SubHeading(text: 'سجلّ الشهر'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.tokens.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: context.tokens.border),
+                ),
+                child: AttendanceMonthGrid(records: cells),
+              ),
+              const SizedBox(height: 20),
+              // Recent records — cap at 10.
+              const _SubHeading(text: 'آخر التسجيلات'),
+              const SizedBox(height: 8),
+              for (final r in recent.take(10)) _RecentRow(record: r),
             ],
           );
         },
       ),
     );
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  final AttendanceSummary s;
-  const _SummaryCard({required this.s});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'نسبة الحضور',
-                        style: TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${s.rate.toStringAsFixed(1)}٪',
-                        style: const TextStyle(
-                          color: AppColors.navy,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 28,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.sky.withValues(alpha: 0.4),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.event_available,
-                    color: AppColors.navy,
-                    size: 32,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _stat('حضور', s.present, AppColors.success),
-                ),
-                Expanded(child: _stat('غياب', s.absent, AppColors.danger)),
-                Expanded(child: _stat('تأخّر', s.late, AppColors.gold)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  String _statusStr(AttendanceStatus s) {
+    switch (s) {
+      case AttendanceStatus.present:
+        return 'present';
+      case AttendanceStatus.absent:
+        return 'absent';
+      case AttendanceStatus.late:
+        return 'late';
+      case AttendanceStatus.unknown:
+        return 'unknown';
+    }
   }
 
-  Widget _stat(String label, int value, Color color) {
+  Widget _tally(BuildContext context, String value, String label, Color color) {
     return Column(
       children: [
         Text(
-          '$value',
+          value,
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.w900,
@@ -127,16 +127,49 @@ class _SummaryCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          style: TextStyle(
+            color: context.tokens.muted,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
   }
 }
 
-class _AttendanceTile extends StatelessWidget {
+class _SubHeading extends StatelessWidget {
+  final String text;
+  const _SubHeading({required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: AppColors.gold,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.navy,
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentRow extends StatelessWidget {
   final AttendanceRecord record;
-  const _AttendanceTile({required this.record});
+  const _RecentRow({required this.record});
 
   StatusKind get _kind {
     switch (record.status) {
@@ -151,51 +184,33 @@ class _AttendanceTile extends StatelessWidget {
     }
   }
 
-  IconData get _icon {
-    switch (record.status) {
-      case AttendanceStatus.present:
-        return Icons.check_circle_outline;
-      case AttendanceStatus.absent:
-        return Icons.cancel_outlined;
-      case AttendanceStatus.late:
-        return Icons.schedule;
-      case AttendanceStatus.unknown:
-        return Icons.help_outline;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final df = DateFormat.yMMMMd('ar');
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Card(
-        child: ListTile(
-          leading: Icon(_icon, color: _color()),
-          title: Text(
-            df.format(record.date),
-            style: const TextStyle(fontWeight: FontWeight.w700),
+    final t = context.tokens;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: t.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              arabize(df.format(record.date)),
+              style: TextStyle(
+                color: t.ink,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ),
-          subtitle: record.notes == null
-              ? null
-              : Text(record.notes!,
-                  style: const TextStyle(color: AppColors.muted)),
-          trailing: StatusChip(label: record.status.labelAr, kind: _kind),
-        ),
+          StatusChip(label: record.status.labelAr, kind: _kind),
+        ],
       ),
     );
-  }
-
-  Color _color() {
-    switch (record.status) {
-      case AttendanceStatus.present:
-        return AppColors.success;
-      case AttendanceStatus.absent:
-        return AppColors.danger;
-      case AttendanceStatus.late:
-        return AppColors.gold;
-      case AttendanceStatus.unknown:
-        return AppColors.muted;
-    }
   }
 }

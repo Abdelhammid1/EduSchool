@@ -4,10 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/theme/colors.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../../shared/models/section_brief.dart';
-import '../../../shared/widgets/async_value_widget.dart';
 import '../../sections/data/sections_repository.dart';
 import '../data/materials_repository.dart';
 
@@ -118,7 +116,7 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم رفع المادة بنجاح'),
+          content: Text('تمّ رفع المادة — ستظهر لطلاب فصلك حالًا ✓'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -248,8 +246,8 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
                         Expanded(
                           child: Text(
                             _fileName!,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, color: AppColors.ink),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700, color: context.tokens.ink),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -264,7 +262,7 @@ class _UploadMaterialScreenState extends ConsumerState<UploadMaterialScreen> {
                 const SizedBox(height: 4),
                 Text('${(_progress * 100).toStringAsFixed(0)}٪',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                    style: TextStyle(color: context.tokens.muted, fontSize: 12)),
               ],
               if (_err != null) ...[
                 const SizedBox(height: 12),

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/env.dart';
-import '../../../core/theme/colors.dart';
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/manasety_logo.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../children/data/children_repository.dart';
 
@@ -31,12 +30,12 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Center(
+            Center(
               child: Text(
                 Env.institutionNameAr,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.navy,
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
                 ),
@@ -46,23 +45,23 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  _row(Icons.person_outline, 'الاسم الكامل',
+                  _row(context, Icons.person_outline, 'الاسم الكامل',
                       user?.fullName ?? '—'),
                   const Divider(height: 1),
-                  _row(Icons.badge_outlined, 'اسم المستخدم',
+                  _row(context, Icons.badge_outlined, 'اسم المستخدم',
                       user?.username ?? '—'),
                   const Divider(height: 1),
-                  _row(Icons.work_outline, 'الدور', user?.roleAr ?? '—'),
+                  _row(context, Icons.work_outline, 'الدور', user?.roleAr ?? '—'),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
               child: Text(
                 'أبناؤك',
                 style: TextStyle(
-                  color: AppColors.navy,
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -82,8 +81,8 @@ class ProfileScreen extends ConsumerWidget {
                           (c) => Column(
                             children: [
                               ListTile(
-                                leading: const Icon(Icons.person,
-                                    color: AppColors.navy),
+                                leading: Icon(Icons.person,
+                                    color: Theme.of(context).colorScheme.primary),
                                 title: Text(
                                   c.fullName,
                                   style: const TextStyle(
@@ -115,10 +114,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Center(
-              child: Text(
-                'منصتي لولي الأمر • الإصدار 0.2.0',
-                style: TextStyle(color: AppColors.muted, fontSize: 11),
+            // Day 13 — pulled version from `package_info_plus` at runtime
+            // so it can't drift from pubspec.yaml (was hard-coded 0.2.0
+            // while pubspec was 0.3.0).
+            Center(
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snap) {
+                  final v = snap.data?.version ?? '…';
+                  return Text(
+                    'منصتي لولي الأمر • الإصدار $v',
+                    style: TextStyle(color: context.tokens.muted, fontSize: 11),
+                  );
+                },
               ),
             ),
           ],
@@ -127,12 +135,12 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _row(IconData icon, String label, String value) {
+  Widget _row(BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.navy, size: 20),
+          Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -140,12 +148,12 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 Text(label,
                     style:
-                        const TextStyle(color: AppColors.muted, fontSize: 11)),
+                        TextStyle(color: context.tokens.muted, fontSize: 11)),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: AppColors.ink,
+                  style: TextStyle(
+                    color: context.tokens.ink,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),

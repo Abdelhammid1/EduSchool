@@ -1,16 +1,42 @@
-# manasety_parent
+# منصتي — تطبيق ولي الأمر
 
-A new Flutter project.
+تطبيق أندرويد لأولياء الأمور في مؤسسة الشيخ صالح الشريف للتعليم القرآني.
+يُتيح لولي الأمر متابعة أبنائه بشكل يومي: الجداول، الحضور، النتائج،
+الفواتير، المواد الدراسية، والإشعارات — في واجهة عربية بالكامل تدعم
+الوضع المظلم والخط الكبير.
 
-## Getting Started
+## الميزات
 
-This project is a starting point for a Flutter application.
+- **متعدد الأبناء** — تبديل سريع بين الأبناء المسجّلين لولي أمر واحد
+- **الحضور** — حلقة إحصائية + تقويم شهري ملوَّن + سجل حديث
+- **النتائج** — معدّل عام + شريط لكل مادة على حدة
+- **الفواتير** — بطاقات ملوَّنة بحالة الدفع + شريط تقدّم
+- **الجدول الأسبوعي** — حصص ملوَّنة حسب المادة مع تمييز اليوم الحالي
+- **المواد الدراسية** — روابط وملفات ينشرها المعلّمون للفصل
+- **الإشعارات** — مجموعة زمنية (اليوم / أمس / هذا الأسبوع / …)
 
-A few resources to get you started if this is your first Flutter project:
+## التشغيل محلياً
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run --dart-define=API_BASE=http://localhost:5050/api
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+للتشغيل على جهاز أندرويد فعلي مع خادم `Flask` محلي، فعّل جسر المنافذ:
+
+```bash
+adb reverse tcp:5050 tcp:5050
+```
+
+## البناء للإصدار
+
+```bash
+flutter build apk --release
+```
+
+للنشر إلى المتجر يُوجَّه `API_BASE` تلقائياً إلى `https://school.manasety.ai/api`
+(انظر `lib/core/env.dart`).
+
+## سجل التغييرات
+
+راجع [`mobile/CHANGELOG.md`](../CHANGELOG.md) للاطلاع على جميع الإصدارات.

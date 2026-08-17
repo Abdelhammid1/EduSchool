@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/api/api_exception.dart';
-import '../../../core/theme/colors.dart';
+import 'package:manasety_ui/manasety_ui.dart';
 import '../../../shared/models/attendance.dart';
-import '../../../shared/widgets/async_value_widget.dart';
-import '../../../shared/widgets/empty_state.dart';
 import '../../students/data/students_repository.dart';
 import '../application/attendance_controller.dart';
 import 'widgets/attendance_row.dart';
@@ -66,8 +63,8 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('ملاحظات', style: TextStyle(
-              fontWeight: FontWeight.w800, color: AppColors.navy, fontSize: 16)),
+            Text('ملاحظات', style: TextStyle(
+              fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary, fontSize: 16)),
             const SizedBox(height: 8),
             TextField(
               controller: controller,
@@ -120,8 +117,8 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
           .submit(widget.sectionId, _date);
       if (!mounted) return;
       final absentN = result['absent_notifications'] ?? 0;
-      final msg = 'تم حفظ الحضور'
-          '${absentN > 0 ? ' — أُرسل $absentN إشعار غياب لأولياء الأمور' : ''}.';
+      final msg = 'تمّ حفظ الحضور بنجاح ✓'
+          '${absentN > 0 ? ' — أُرسل $absentN إشعار غياب لأولياء الأمور' : ''}';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
@@ -160,6 +157,7 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
               if (students.isEmpty) {
                 return const EmptyState(
                   icon: Icons.group_outlined,
+                  illustration: EmptyIllustration(kind: ManasetyEmpty.classroom),
                   title: 'لا يوجد طلاب في هذا الفصل',
                 );
               }
@@ -207,8 +205,8 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
                 ],
               );
             },
-            loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.navy)),
+            loading: () => Center(
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
             error: (e, _) => Padding(
                 padding: const EdgeInsets.all(24),
                 child: Center(child: Text('$e'))),
@@ -220,10 +218,10 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
 
   Widget _stickyTop(AttendanceFormState s) {
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: context.tokens.border)),
       ),
       child: Row(
         children: [
@@ -234,22 +232,23 @@ class _TakeAttendanceScreenState extends ConsumerState<TakeAttendanceScreen> {
               children: [
                 _chip('${s.count(AttendanceStatus.present)} حاضر', AppColors.success),
                 _chip('${s.count(AttendanceStatus.absent)} غائب', AppColors.danger),
-                _chip('${s.count(AttendanceStatus.late)} متأخّر', AppColors.gold),
+                _chip('${s.count(AttendanceStatus.late)} متأخّر', AppColors.goldInk),
                 if (s.unmarked > 0)
-                  _chip('${s.unmarked} لم يُعلَّم', AppColors.muted),
+                  _chip('${s.unmarked} لم يُعلَّم', context.tokens.muted),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          // Day 12 — dropped shrinkWrap + bumped padding so the touch target
+          // reaches a comfortable ≥48dp. This is a bulk action; missing it
+          // and firing individual pills instead wastes a lot of time.
           OutlinedButton(
             onPressed: () =>
                 ref.read(attendanceControllerProvider(_key).notifier).markAllPresent(),
             style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
-            child: const Text('تعليم الكل حاضر', style: TextStyle(fontSize: 11)),
+            child: const Text('تعليم الكل حاضر', style: TextStyle(fontSize: 13)),
           ),
         ],
       ),
