@@ -7,6 +7,42 @@ this project uses semantic versioning (MAJOR.MINOR.PATCH+build).
 
 ---
 
+## [0.4.0+5] — 2026-08-18
+
+**Naming & presentation overhaul (TKT-10 / TKT-11 / TKT-12 / TKT-13).**
+
+### Changed
+- **Unified commercial naming** — every user-facing "منصتي" string swapped to
+  `بوابة ولي الأمر` / `بوابة المعلم` across Android launcher label, task
+  switcher, iOS `CFBundleDisplayName`, notification channel, profile version
+  footer, and TalkBack logo label. iOS + Android now show the same name
+  under the app icon.
+- **Splash re-baked per app** — the small watermark now reads the portal
+  name (previously identical `منصتي` across both apps); the institution
+  wordmark below is unchanged.
+- **Screen title / tone consistency pass** — teacher hub's three-way
+  inconsistency (`الفصول` / `فصولي` / `فصولك`) unified as `فصولك`;
+  `جدولك` replaces `الجدول الأسبوعي`; grade-picker AppBar trimmed to
+  `رصد الدرجات`.
+
+### Added
+- **Marketing screenshot pack** — 12 branded 1080×1920 PNGs under
+  `mobile/docs/screenshots/{parent,teacher}/` for direct Play Console
+  upload. Raw screencaps preserved in `raw/` for future re-composition.
+- **Play Console store-listing pack** — `mobile/docs/store-listing.md`
+  gives whoever runs Play Console the exact copy to paste (app names,
+  short + full descriptions per app, corrected Data-safety declaration,
+  support-contact recommendations, pre-publish checklist).
+- **School-admin dashboard overhaul** (`/dashboard`) — metrics + alerts
+  + shortcuts, matching the mobile brand. New `admin_only` decorator
+  gates it to `role.name == 'admin'`.
+
+### Fixed
+- iOS `CFBundleDisplayName` was `مدرسة الصالح الشريف` (grammatically wrong —
+  extra `ال` before `صالح`); now `بوابة ولي الأمر` / `بوابة المعلم`.
+
+---
+
 ## [0.3.0+4] — 2026-08-15
 
 Release-polish sprint (Days 0-13). Both apps are now demo-ready.
