@@ -194,3 +194,137 @@ table.data .actions{display:flex;gap:6px;justify-content:flex-end}
 .text-muted{color:var(--c-muted)}
 .text-orange,.text-gold{color:var(--c-gold)}
 .text-navy{color:var(--c-navy)}
+
+/* ==========================================================================
+   Admin dashboard — hero, quick-actions, alerts panel, bars, extra stat tones
+   Mobile-brand parity: navy + gold + faint arabesque backdrop
+   ========================================================================== */
+
+:root{
+  --c-cream:#FAF5E8;
+}
+
+/* ---------- Hero card ---------- */
+.hero-card{
+  position:relative;
+  background:linear-gradient(135deg,var(--c-navy) 0%,var(--c-navy-soft) 100%);
+  color:var(--c-cream);
+  border-radius:14px;
+  padding:22px 26px;
+  margin-bottom:20px;
+  overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,21,86,.12);
+}
+/* Faint 8-pointed-star arabesque as backdrop — inline SVG data URI. */
+.hero-card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.08;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23ffffff' stroke-width='1.2'><rect x='30' y='30' width='60' height='60'/><rect x='30' y='30' width='60' height='60' transform='rotate(45 60 60)'/></g></svg>");
+  background-size:120px 120px;
+}
+.hero-inner{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.hero-body{max-width:70%}
+.hero-eyebrow{font-size:12px;font-weight:600;color:var(--c-gold);letter-spacing:.5px;margin-bottom:6px}
+.hero-title{font-size:26px;font-weight:800;margin:0;color:var(--c-cream)}
+.hero-sub{font-size:13px;color:rgba(250,245,232,.85);margin-top:6px}
+.hero-dot{opacity:.5;margin:0 8px}
+.hero-pill{
+  background:var(--c-gold);color:var(--c-navy);
+  padding:8px 14px;border-radius:20px;font-weight:700;font-size:13px;
+  font-feature-settings:"tnum";white-space:nowrap;
+}
+
+/* ---------- Gold accent underline ---------- */
+.gold-accent{
+  display:block;width:56px;height:3px;background:var(--c-gold);
+  border-radius:2px;margin-top:12px;
+}
+.gold-accent.inline{display:inline-block;margin:0 8px 0 0;vertical-align:middle;width:32px;height:2px}
+
+/* ---------- Section heading ---------- */
+.section-head{
+  color:var(--c-navy);font-size:15px;font-weight:800;
+  margin:24px 0 12px;display:flex;align-items:center;
+}
+
+/* ---------- Quick actions ---------- */
+.quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.qa-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--c-white);color:var(--c-navy);
+  padding:8px 14px;border-radius:10px;
+  border:1px solid var(--c-border);
+  font-size:13px;font-weight:600;text-decoration:none;
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.qa-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,21,86,.10);border-color:var(--c-gold)}
+.qa-btn.qa-solid{background:var(--c-navy);color:var(--c-cream);border-color:var(--c-navy)}
+.qa-btn.qa-solid:hover{background:var(--c-navy-soft);border-color:var(--c-gold)}
+.qa-icon{color:var(--c-gold);font-weight:700}
+
+/* ---------- Extra stat tones + link variant ---------- */
+.stat.red   {border-left:4px solid var(--c-red)}
+.stat.amber {border-left:4px solid var(--c-amber)}
+.stat.gold  {border-left:4px solid var(--c-gold)}
+.stat.muted {border-left:4px solid #94A3B8}
+.stat.red   .icon{background:rgba(232,69,69,.12);color:var(--c-red)}
+.stat.amber .icon{background:rgba(244,185,66,.14);color:#A56D00}
+.stat.gold  .icon{background:rgba(212,175,55,.14);color:var(--c-gold-dark)}
+.stat.muted .icon{background:#EEF1F5;color:#64748B}
+
+a.stat.stat-link{
+  text-decoration:none;color:inherit;cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+a.stat.stat-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,21,86,.10)}
+
+/* ---------- Alerts panel ---------- */
+.alerts-panel{
+  background:var(--c-white);border:1px solid var(--c-border);border-radius:12px;
+  border-right:4px solid var(--c-gold);   /* RTL leading edge = right */
+  padding:14px 16px;
+}
+.alerts-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--c-surface-2)}
+.alerts-head h4{margin:0;color:var(--c-navy);font-size:14px;font-weight:800}
+.alerts-link{font-size:12px;color:var(--c-navy);text-decoration:none;font-weight:600}
+.alerts-link:hover{color:var(--c-gold-dark)}
+.alerts-empty{padding:12px 0;color:var(--c-muted);font-size:13px;text-align:center}
+
+.alert-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 4px;border-bottom:1px solid var(--c-surface-2);
+  text-decoration:none;color:inherit;
+}
+.alert-row:last-child{border-bottom:none}
+.alert-row:hover{background:rgba(245,247,250,.5)}
+.alert-icon{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;flex-shrink:0;
+}
+.alert-warn  {background:rgba(244,185,66,.16);color:#A56D00}
+.alert-amber {background:rgba(244,185,66,.16);color:#A56D00}
+.alert-red   {background:rgba(232,69,69,.14);color:var(--c-red)}
+.alert-info  {background:rgba(0,21,86,.10);color:var(--c-navy)}
+.alert-body{flex:1;min-width:0}
+.alert-title{font-size:13px;font-weight:700;color:var(--c-text);margin-bottom:2px}
+.alert-meta{font-size:11px;color:var(--c-muted)}
+.alert-cta{color:var(--c-muted);font-size:16px}
+
+/* ---------- Bar chart rows (grade breakdown) ---------- */
+.bar-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--c-surface-2)}
+.bar-row:last-child{border-bottom:none}
+.bar-label{width:32%;font-size:13px;color:var(--c-navy);font-weight:600}
+.bar-track{flex:1;height:10px;background:var(--c-surface-2);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .3s ease}
+.bar-navy{background:linear-gradient(90deg,var(--c-navy),var(--c-navy-soft))}
+.bar-gold{background:linear-gradient(90deg,var(--c-gold-dark),var(--c-gold))}
+.bar-green{background:var(--c-green)}
+.bar-count{width:44px;text-align:end;font-size:13px;font-weight:800;color:var(--c-navy);font-feature-settings:"tnum"}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  .hero-inner{flex-direction:column}
+  .hero-body{max-width:100%}
+  .quick-actions{gap:6px}
+  .qa-btn{padding:6px 10px;font-size:12px}
+}

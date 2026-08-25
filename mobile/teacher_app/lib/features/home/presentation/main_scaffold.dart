@@ -19,7 +19,10 @@ class MainScaffold extends ConsumerStatefulWidget {
 class _MainScaffoldState extends ConsumerState<MainScaffold> {
   int _idx = 0;
 
-  static const _titles = ['فصولي', 'الجدول الأسبوعي', 'الإشعارات', 'الحساب'];
+  // TKT-11/12 — unified "talking-to-you" tone across teacher hub (matches
+  // parent's `أبناؤك`). Nav label also becomes `فصولك` so the three prior
+  // variants (`الفصول` / `فصولي` / `فصولك`) collapse into one.
+  static const _titles = ['فصولك', 'جدولك', 'الإشعارات', 'الحساب'];
 
   @override
   Widget build(BuildContext context) {
@@ -55,13 +58,13 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
           NavigationDestination(
             icon: const Icon(Icons.class_outlined),
             selectedIcon: Icon(Icons.class_, color: Theme.of(context).colorScheme.primary),
-            label: 'الفصول',
+            label: 'فصولك',
           ),
           NavigationDestination(
             icon: const Icon(Icons.calendar_view_week_outlined),
             selectedIcon:
                 Icon(Icons.calendar_view_week, color: Theme.of(context).colorScheme.primary),
-            label: 'الجدول',
+            label: 'جدولك',
           ),
           NavigationDestination(
             icon: Badge.count(

@@ -34,7 +34,7 @@ class ManasetyLogo extends StatelessWidget {
       gaplessPlayback: true,
       // Day 12 — TalkBack now announces "شعار منصتي" on the login screen
       // instead of the raw asset path (or silence).
-      semanticLabel: 'شعار منصتي',
+      semanticLabel: 'شعار المؤسسة',
     );
     if (background == null) return img;
     return Container(

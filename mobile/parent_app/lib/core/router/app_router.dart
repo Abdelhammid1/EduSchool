@@ -7,6 +7,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/children/presentation/child_detail_screen.dart';
 import '../../features/children/presentation/children_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/splash/presentation/welcome_splash_screen.dart';
 import 'package:manasety_ui/manasety_ui.dart';
 import 'routes.dart';
@@ -35,6 +36,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
       GoRoute(path: Routes.home, builder: (_, __) => const ChildrenScreen()),
       GoRoute(path: Routes.profile, builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: Routes.profileEdit, builder: (_, __) => const EditProfileScreen()),
       GoRoute(
         path: '/children/:id',
         builder: (_, state) {
