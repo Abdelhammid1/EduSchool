@@ -74,6 +74,77 @@ def me():
     return jsonify({"user": _user_dict(_user())})
 
 
+# ---------- Self-service profile edits (Sprint 11) ----------
+
+import re as _re
+_USERNAME_RE = _re.compile(r"^[a-zA-Z0-9._-]{3,32}$")
+
+
+@bp.route("/me/username", methods=["POST"])
+@jwt_required
+def change_username():
+    """Self-service username rename.
+
+    Body: {"current_password": str, "new_username": str}
+    - Requires the current password (defense in depth — a stolen JWT can't
+      silently take over a username).
+    - Enforces uniqueness within the caller's school.
+    - Enforces `^[a-zA-Z0-9._-]{3,32}$` — same shape as any other username.
+    """
+    data = request.get_json(silent=True) or {}
+    current_password = data.get("current_password") or ""
+    new_username = (data.get("new_username") or "").strip()
+
+    if not current_password or not new_username:
+        return _err("بيانات ناقصة", 400)
+    if not _USERNAME_RE.match(new_username):
+        return _err(
+            "اسم المستخدم يجب أن يكون ٣-٣٢ حرفًا لاتينيًا أو رقمًا أو . _ -",
+            400,
+        )
+
+    u = _user()
+    if not u.check_password(current_password):
+        return _err("كلمة المرور الحالية غير صحيحة", 400)
+
+    if new_username == u.username:
+        # No-op — return the current user; keeps the client's UX predictable.
+        return jsonify({"user": _user_dict(u)})
+
+    # Uniqueness — case-sensitive, scoped to the same school. Excludes self
+    # (harmless since we no-op'd equal case above, but explicit).
+    exists = User.query.filter(
+        User.school_id == u.school_id,
+        User.username == new_username,
+        User.id != u.id,
+    ).first()
+    if exists:
+        return _err("اسم المستخدم مأخوذ بالفعل", 409)
+
+    u.username = new_username
+    db.session.commit()
+    return jsonify({"user": _user_dict(u)})
+
+
+@bp.route("/me/full-name", methods=["POST"])
+@jwt_required
+def change_full_name():
+    """Self-service display-name update. No password required — the full
+    name is display-only and doesn't affect login."""
+    data = request.get_json(silent=True) or {}
+    new_full_name = (data.get("full_name") or "").strip()
+
+    if not new_full_name:
+        return _err("الاسم مطلوب", 400)
+    if len(new_full_name) > 128:
+        return _err("الاسم طويل جدًا (حد أقصى ١٢٨ حرف)", 400)
+
+    u = _user()
+    u.full_name = new_full_name
+    db.session.commit()
+    return jsonify({"user": _user_dict(u)})
+
+
 def _user_dict(user: User) -> dict:
     teacher = Teacher.query.filter_by(user_id=user.id).first()
     children = Student.query.filter_by(parent_user_id=user.id).all()
@@ -283,6 +354,7 @@ def teacher_attendance():
                         "message": f"غياب: {e.student.full_name} بتاريخ {on_date.isoformat()}",
                     },
                     target_phone=phone,
+                    student_id=e.student_id,  # Sprint 11: parent-scoping FK
                     related_kind="attendance", related_id=existing.id,
                 )
                 absent_notifs += 1
@@ -637,7 +709,22 @@ def _material_dict(m):
 @bp.route("/parent/children", methods=["GET"])
 @jwt_required
 def parent_children():
-    children = Student.query.filter_by(school_id=_sid(), parent_user_id=_user().id).all()
+    # Sprint 11 — belt-and-braces: the .parent_user_id filter already excludes
+    # unrelated students, but the explicit isnot(None) makes the intent
+    # unmistakable to code review and guards against any future refactor
+    # that might accidentally pass through students with a NULL FK.
+    uid = _user().id
+    children = (
+        Student.query
+        .filter(Student.school_id == _sid())
+        .filter(Student.parent_user_id.isnot(None))
+        .filter(Student.parent_user_id == uid)
+        .all()
+    )
+    current_app.logger.info(
+        "parent_children(school=%s, user=%s) -> %d rows",
+        _sid(), uid, len(children),
+    )
     out = []
     year = _active_year()
     for s in children:
@@ -732,16 +819,28 @@ def parent_child_invoices(student_id):
 @bp.route("/parent/notifications", methods=["GET"])
 @jwt_required
 def parent_notifications():
-    children = Student.query.filter_by(school_id=_sid(), parent_user_id=_user().id).all()
-    phones = {(s.parent_phone or "").strip() for s in children if s.parent_phone}
-    if not phones:
+    # Sprint 11 — filter by direct student_id FK, not target_phone.
+    # The old phone-based filter cross-leaked when two families shared a
+    # phone number; the FK path guarantees a notification only reaches the
+    # parent whose Student row it was recorded against.
+    child_ids = [
+        r[0] for r in db.session.query(Student.id).filter(
+            Student.school_id == _sid(),
+            Student.parent_user_id.isnot(None),
+            Student.parent_user_id == _user().id,
+        ).all()
+    ]
+    if not child_ids:
         return jsonify({"notifications": []})
     notifs = (
-        NotificationLog.query.filter(
+        NotificationLog.query
+        .filter(
             NotificationLog.school_id == _sid(),
-            NotificationLog.target_phone.in_(list(phones)),
+            NotificationLog.student_id.in_(child_ids),
         )
-        .order_by(NotificationLog.created_at.desc()).limit(50).all()
+        .order_by(NotificationLog.created_at.desc())
+        .limit(50)
+        .all()
     )
     return jsonify({"notifications": [
         {

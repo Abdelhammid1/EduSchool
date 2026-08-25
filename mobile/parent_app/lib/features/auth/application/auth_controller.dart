@@ -89,6 +89,19 @@ class AuthController extends Notifier<AuthState> {
     state = Unauthenticated(lastMessage: message);
   }
 
+  /// Sprint 11 — refresh cached user from /me after a self-service edit
+  /// (username/full-name change). Keeps the profile card and everywhere else
+  /// that reads `Authenticated.user` in sync without forcing a re-login.
+  Future<void> refreshUser() async {
+    final s = state;
+    if (s is! Authenticated) return;
+    try {
+      final user = await ref.read(authRepositoryProvider).me();
+      await ref.read(secureStorageProvider).writeUserJson(jsonEncode(user.toJson()));
+      state = Authenticated(user);
+    } catch (_) {/* keep old state on failure */}
+  }
+
   /// Fire-and-forget FCM init after successful auth.
   void _initFcmAsync() {
     Future<void>(() async {

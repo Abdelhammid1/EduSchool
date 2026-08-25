@@ -5,6 +5,9 @@ class Endpoints {
   static const me = '/me';
   static const changePassword = '/auth/change-password';
   static const deviceToken = '/auth/device-token';
+  // Sprint 11 — self-service profile edits
+  static const changeUsername = '/me/username';
+  static const changeFullName = '/me/full-name';
 
   // المعلم
   static const teacherSections = '/teacher/sections';

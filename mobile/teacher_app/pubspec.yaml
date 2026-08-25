@@ -4,7 +4,7 @@ publish_to: 'none'
 # Day 13 — release-polish sprint bumped to 0.3.0. Version string in the
 # profile screen is now read at runtime from `package_info_plus` so this
 # number is the single source of truth.
-version: 0.4.0+5
+version: 0.4.1+6
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

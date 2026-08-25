@@ -29,6 +29,17 @@ class NotificationLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     school_id = db.Column(db.Integer, db.ForeignKey("schools.id"), nullable=False, index=True)
+    # Sprint 11 (parent-scoping fix): notifications now carry a direct FK to
+    # the student they concern. The prior read-side filter joined via
+    # target_phone matching, which cross-leaked when two families shared a
+    # phone number. Nullable so legacy rows without a resolvable student
+    # (backfill misses) don't fail the constraint; those rows just stop
+    # surfacing to any parent — expected behavior.
+    student_id = db.Column(
+        db.Integer,
+        db.ForeignKey("students.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
     kind = db.Column(db.String(32), nullable=False)
     target_phone = db.Column(db.String(32))
     target_email = db.Column(db.String(128))
@@ -42,6 +53,8 @@ class NotificationLog(db.Model):
     related_id = db.Column(db.Integer)
     read_at = db.Column(db.DateTime, nullable=True)  # Sprint 10: parent tapped/read
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    student = db.relationship("Student", foreign_keys=[student_id])
 
 
 class DeviceToken(db.Model):

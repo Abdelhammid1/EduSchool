@@ -7,6 +7,48 @@ this project uses semantic versioning (MAJOR.MINOR.PATCH+build).
 
 ---
 
+## [0.4.1+6] — 2026-08-23
+
+**Parent-app scoping + self-service username rename (Sprint 11).**
+
+### Added
+- **Self-service username / display-name edit** — new "تعديل الحساب"
+  screen behind the pencil icon in the parent-app profile screen.
+  * Full-name update: no password required.
+  * Username update: requires current password (defense-in-depth) +
+    3–32 char latin/digit/`._-` pattern + uniqueness check within school.
+  * Backed by new endpoints `POST /me/username` + `POST /me/full-name`.
+- **`AuthController.refreshUser()`** — refreshes the cached user from
+  `/me` so profile-screen values update immediately after an edit.
+
+### Changed
+- **`/parent/notifications` refactored** to filter by direct
+  `NotificationLog.student_id` FK instead of the fragile
+  `target_phone` string match. Eliminates the cross-family leak that
+  happened when two parent accounts shared a phone number.
+- **`/parent/children` hardened** with an explicit
+  `parent_user_id IS NOT NULL` guard and a debug-log line so future
+  regressions are trivially diagnosable.
+
+### Fixed
+- Notification-scoping fragility (Concern #3): notifications now use a
+  proper student FK. Phone-based fallback stays only for the outbound
+  SMS gateway.
+
+### Migrations
+- `a1b2c3d4e5f6_sprint_11_notification_student_fk`: adds
+  `notification_logs.student_id` FK + index, backfills existing rows
+  by matching `target_phone == students.parent_phone` within a school.
+
+### Ops
+- New `scripts/audit_parent_children.py` — lists every parent user with
+  their linked students, and flags orphaned students (parent_user_id
+  IS NULL). Meant for a one-off run when a parent reports seeing
+  children that don't belong to them (Concern #2 verdict: filter is
+  correct in code; extras are likely data-side mis-linkage).
+
+---
+
 ## [0.4.0+5] — 2026-08-18
 
 **Naming & presentation overhaul (TKT-10 / TKT-11 / TKT-12 / TKT-13).**

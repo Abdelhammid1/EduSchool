@@ -102,7 +102,14 @@ def send_notification(
     school_id: int, kind: str, payload: dict,
     target_phone: Optional[str] = None, target_email: Optional[str] = None,
     related_kind: Optional[str] = None, related_id: Optional[int] = None,
+    student_id: Optional[int] = None,
 ) -> NotificationLog:
+    """Sprint 11: `student_id` is now the primary parent-scoping key.
+
+    Passing `student_id` at insert time lets `/parent/notifications` filter
+    by direct FK (Student.parent_user_id → this row's student_id) instead of
+    fuzzy-matching on target_phone. target_phone stays for the SMS gateway.
+    """
     log = NotificationLog(
         school_id=school_id,
         kind=kind,
@@ -111,6 +118,7 @@ def send_notification(
         target_email=target_email,
         related_kind=related_kind,
         related_id=related_id,
+        student_id=student_id,
         status="queued",
     )
     db.session.add(log)

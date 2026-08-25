@@ -260,6 +260,7 @@ def invoice_new():
                     ),
                 },
                 target_phone=phone,
+                student_id=e.student_id,  # Sprint 11: parent-scoping FK
                 related_kind="invoice", related_id=inv.id,
             )
 
@@ -431,6 +432,7 @@ def invoice_pay(invoice_id):
                 ),
             },
             target_phone=phone,
+            student_id=inv.enrollment.student_id,  # Sprint 11: parent-scoping FK
             related_kind="payment", related_id=payment.id,
         )
 

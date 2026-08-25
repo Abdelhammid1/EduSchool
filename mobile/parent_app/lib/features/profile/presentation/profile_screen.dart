@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/env.dart';
@@ -17,7 +18,17 @@ class ProfileScreen extends ConsumerWidget {
     final children = ref.watch(childrenProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الحساب')),
+      appBar: AppBar(
+        title: const Text('الحساب'),
+        actions: [
+          // Sprint 11 — pencil opens self-service edit-profile screen
+          IconButton(
+            tooltip: 'تعديل الحساب',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => context.push('/profile/edit'),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

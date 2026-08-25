@@ -175,6 +175,7 @@ def mark(section_id):
                             ),
                         },
                         target_phone=phone,
+                        student_id=student.id,  # Sprint 11: parent-scoping FK
                         related_kind="attendance",
                         related_id=record.id,
                     )
