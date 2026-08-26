@@ -45,6 +45,17 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<!-- Required by Apple App Review (ITMS-90683) because image_picker + file_picker
+		     reference the Photos / Camera / Microphone APIs even when not actively used.
+		     App Store Connect rejects the upload without these purpose strings. -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>يحتاج التطبيق للوصول إلى مكتبة الصور لرفع صور المواد التعليمية والملفات المرفقة.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>يحتاج التطبيق للوصول إلى الكاميرا لالتقاط صور المواد التعليمية.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>يحتاج التطبيق للوصول إلى الميكروفون عند تسجيل ملاحظات صوتية على المواد التعليمية.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>يحتاج التطبيق لحفظ الصور والمرفقات في مكتبة صور الجهاز.</string>
 		<!-- Sprint 10 — allow http://localhost + LAN IP for dev builds against local Flask -->
 		<key>NSAppTransportSecurity</key>
 		<dict>
