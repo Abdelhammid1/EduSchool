@@ -1,5 +1,4 @@
 from flask import Flask, redirect, render_template, url_for
-from flask_login import current_user
 
 from .config import Config
 from .extensions import db, migrate, login_manager, bcrypt, csrf
@@ -51,9 +50,7 @@ def create_app(config_class=Config):
 
     @app.route("/")
     def index():
-        if current_user.is_authenticated:
-            return redirect(url_for("dashboard.home"))
-        return redirect(url_for("auth.login"))
+        return render_template("landing.html")
 
     @app.context_processor
     def inject_globals():
