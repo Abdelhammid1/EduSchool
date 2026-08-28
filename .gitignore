@@ -31,3 +31,7 @@ mobile/*/android/app/google-services.json
 mobile/*/android/key.properties
 *.jks
 *.keystore
+*.sql
+backups/
+db_backups/
+audit-*.txt
