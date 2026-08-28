@@ -32,7 +32,19 @@ class ChildrenScreen extends ConsumerWidget {
     final children = ref.watch(childrenProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('أبناؤك')),
+      appBar: AppBar(
+        title: const Text('أبناؤك'),
+        actions: [
+          // Always expose the profile entry point — a parent with zero linked
+          // children would otherwise have no way to reach the account screen
+          // (that button normally lives in child_detail_screen's AppBar).
+          IconButton(
+            tooltip: 'الحساب',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/profile'),
+          ),
+        ],
+      ),
       body: AppRefreshIndicator(
         onRefresh: () async {
           ref.invalidate(childrenProvider);
