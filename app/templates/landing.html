@@ -60,6 +60,9 @@
     .brand-text .school{color:var(--c-navy);font-weight:800;font-size:16px}
     .brand-text .by{color:var(--c-muted);font-weight:600;font-size:11.5px;margin-top:2px}
     .brand-text .by b{color:var(--c-gold-dark);font-weight:800}
+    /* Every "منصتي" mention links to manasety.ai */
+    .manasety-link{color:var(--c-gold-dark);font-weight:800;text-decoration:none;border-bottom:1px dashed rgba(184,148,31,.45);transition:.15s all}
+    .manasety-link:hover{color:var(--c-navy);border-bottom-color:var(--c-navy)}
     .nav-links{display:flex;gap:22px;align-items:center}
     .nav-links a{color:var(--c-text);font-weight:600;font-size:14px}
     .nav-links a:hover{color:var(--c-navy)}
@@ -216,15 +219,15 @@
 
 <header class="nav">
   <div class="nav-inner">
-    <a class="brand" href="{{ url_for('index') }}">
-      <span class="logo">
+    <div class="brand">
+      <a href="{{ url_for('index') }}" class="logo" aria-label="{{ school_name }}">
         <img src="{{ url_for('static', filename='img/logo-emblem.png') }}" alt="{{ school_name }}">
-      </span>
-      <span class="brand-text">
-        <span class="school">{{ school_name }}</span>
-        <span class="by">بتطوير من <b>{{ app_name }}</b></span>
-      </span>
-    </a>
+      </a>
+      <div class="brand-text">
+        <a href="{{ url_for('index') }}" class="school" style="color:inherit;text-decoration:none">{{ school_name }}</a>
+        <span class="by">بتطوير من <a class="manasety-link" href="https://manasety.ai" target="_blank" rel="noopener">{{ app_name }}</a></span>
+      </div>
+    </div>
     <nav class="nav-links">
       <a href="#features">المزايا</a>
       <a href="#roles">من يستخدمها</a>
@@ -241,13 +244,13 @@
 <section class="hero">
   <div class="hero-inner">
     <div>
-      <span class="eyebrow"><span class="dot"></span> منصّة <b style="color:var(--c-navy);margin:0 3px">{{ app_name }}</b> · نظام مدرسي متكامل باللغة العربية</span>
+      <span class="eyebrow"><span class="dot"></span> منصّة <a class="manasety-link" href="https://manasety.ai" target="_blank" rel="noopener" style="margin:0 3px">{{ app_name }}</a> · نظام مدرسي متكامل باللغة العربية</span>
       <h1 class="hero-title">
         أهلاً بكم في <span>{{ school_name }}</span>
         <br>أدر مدرستك بالكامل من مكان واحد.
       </h1>
       <p>
-        هذه المنصّة من تطوير <b style="color:var(--c-navy)">{{ app_name }}</b> — تجمع الأكاديمي والحضور والدرجات
+        هذه المنصّة من تطوير <a class="manasety-link" href="https://manasety.ai" target="_blank" rel="noopener">{{ app_name }}</a> — تجمع الأكاديمي والحضور والدرجات
         والمالية والموارد البشرية وبوابة أولياء الأمور في نظام واحد سهل ومصمّم للمدارس العربية.
       </p>
       <div class="hero-cta">
@@ -386,7 +389,7 @@
       <img src="{{ url_for('static', filename='img/logo-emblem.png') }}" alt="{{ school_name }}">
       <div>
         <div class="foot-school">© {{ school_name }} — جميع الحقوق محفوظة.</div>
-        <div class="foot-by">بتطوير من <b>{{ app_name }}</b> · منصّة إدارة المدارس المتكاملة</div>
+        <div class="foot-by">بتطوير من <a class="manasety-link" href="https://manasety.ai" target="_blank" rel="noopener">{{ app_name }}</a> · منصّة إدارة المدارس المتكاملة</div>
       </div>
     </div>
     <div class="foot-links">
