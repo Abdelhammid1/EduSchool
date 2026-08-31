@@ -63,5 +63,14 @@
 		</dict>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- ITMS-90683 — usage descriptions required by Apple review for image picker / camera / mic APIs used inside the app -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>يحتاج التطبيق للوصول إلى مكتبة الصور لاختيار صورة الملف الشخصي أو إرفاق صور مع طلبات ولي الأمر.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>يحتاج التطبيق لصلاحية حفظ الصور والمستندات (مثل الإشعارات وسندات الدفع) إلى مكتبة الصور.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>يحتاج التطبيق إلى استخدام الكاميرا لالتقاط صورة الملف الشخصي أو تصوير المستندات المرفقة.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>يحتاج التطبيق إلى الميكروفون لتسجيل الملاحظات الصوتية والتواصل مع المدرسة.</string>
 	</dict>
 </plist>
