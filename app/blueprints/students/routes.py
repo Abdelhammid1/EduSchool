@@ -22,13 +22,31 @@ def _active_year():
 
 
 def _next_permanent_code() -> str:
+    """
+    Returns the next serial permanent code for this school.
+
+    Uses MAX(existing suffix) + 1 rather than COUNT(*) + 1 so that deleting
+    a student never causes a collision with an existing code on the next
+    insert (unique constraint uq_student_school_code).
+    """
     school = db.session.get(School, _sid())
-    n = (
-        db.session.query(func.count(Student.id))
-        .filter(Student.school_id == _sid())
-        .scalar() or 0
+    if school is None:
+        raise ValueError("لا توجد مدرسة مرتبطة بالمستخدم الحالي")
+    base = school.code or "SCH"
+    prefix = f"{base}-"
+    codes = (
+        db.session.query(Student.permanent_code)
+        .filter(Student.school_id == _sid(),
+                Student.permanent_code.like(f"{prefix}%"))
+        .all()
     )
-    return f"{school.code}-{n + 1:05d}"
+    max_n = 0
+    for (code,) in codes:
+        try:
+            max_n = max(max_n, int(code[len(prefix):]))
+        except (ValueError, TypeError):
+            pass
+    return f"{prefix}{max_n + 1:05d}"
 
 
 def _get(model, oid):
@@ -86,24 +104,40 @@ def student_new():
                 )
                 return render_template("students/form.html", student=None, form=request.form, dup=dup, parent_users=_parent_users())
 
-        student = Student(
-            school_id=_sid(),
-            permanent_code=_next_permanent_code(),
-            full_name=request.form["full_name"].strip(),
-            national_id=nid,
-            dob=_parse_date(request.form.get("dob")),
-            gender=request.form.get("gender") or None,
-            parent_name=(request.form.get("parent_name") or "").strip() or None,
-            parent_phone=(request.form.get("parent_phone") or "").strip() or None,
-            parent_email=(request.form.get("parent_email") or "").strip() or None,
-            parent_user_id=int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None,
-            mother_name=(request.form.get("mother_name") or "").strip() or None,
-            mother_phone=(request.form.get("mother_phone") or "").strip() or None,
-            address=(request.form.get("address") or "").strip() or None,
-            notes=(request.form.get("notes") or "").strip() or None,
-        )
-        db.session.add(student)
-        db.session.commit()
+        try:
+            dob = _parse_date(request.form.get("dob"))
+        except ValueError:
+            flash("تاريخ الميلاد غير صالح — استخدم صيغة YYYY-MM-DD.", "danger")
+            return render_template("students/form.html", student=None, form=request.form, dup=None, parent_users=_parent_users())
+
+        try:
+            student = Student(
+                school_id=_sid(),
+                permanent_code=_next_permanent_code(),
+                full_name=request.form["full_name"].strip(),
+                national_id=nid,
+                dob=dob,
+                gender=request.form.get("gender") or None,
+                parent_name=(request.form.get("parent_name") or "").strip() or None,
+                parent_phone=(request.form.get("parent_phone") or "").strip() or None,
+                parent_email=(request.form.get("parent_email") or "").strip() or None,
+                parent_user_id=int(request.form["parent_user_id"]) if request.form.get("parent_user_id") else None,
+                mother_name=(request.form.get("mother_name") or "").strip() or None,
+                mother_phone=(request.form.get("mother_phone") or "").strip() or None,
+                address=(request.form.get("address") or "").strip() or None,
+                notes=(request.form.get("notes") or "").strip() or None,
+            )
+            db.session.add(student)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("student create failed: form=%r", dict(request.form))
+            flash(
+                "تعذّر حفظ ملف الطالب. راجع البيانات المدخلة، وإذا استمرت المشكلة تواصل مع الدعم الفني (تم تسجيل الخطأ).",
+                "danger",
+            )
+            return render_template("students/form.html", student=None, form=request.form, dup=None, parent_users=_parent_users())
+
         flash(f"تم إنشاء ملف الطالب — كود دائم: {student.permanent_code}", "success")
         return redirect(url_for("students.student_detail", student_id=student.id))
     return render_template("students/form.html", student=None, form={}, dup=None, parent_users=_parent_users())
