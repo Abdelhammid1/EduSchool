@@ -1,0 +1,11 @@
+{# BRAND: shared Manasety-credit footer. One place so the admin shell base
+   never drifts from the public landing page. The whole thing disappears
+   when BRAND_SHOW=0 in the env. #}
+{% if brand and brand.show %}
+<footer class="site-footer" style="text-align:center;padding:16px;border-top:1px solid var(--c-border);background:var(--c-white);margin-top:24px">
+  <span class="text-muted">© {{ now().year }} {{ app_name }} — {{ brand.text }}</span>
+  {# rel=noopener stops the opened tab from navigating this window via window.opener #}
+  <a href="{{ brand.url }}" target="_blank" rel="noopener noreferrer"
+     class="brand-link" style="font-weight:700;color:var(--c-navy);text-decoration:none;margin-inline-start:6px">{{ brand.name }}</a>
+</footer>
+{% endif %}

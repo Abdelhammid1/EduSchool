@@ -1,3 +1,6 @@
+import os
+from datetime import datetime, timezone
+
 from flask import Flask, redirect, render_template, url_for
 
 from .config import Config
@@ -54,7 +57,17 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_globals():
-        return {"app_name": "منصتي", "school_name": app.config["DEFAULT_SCHOOL_NAME"]}
+        return {
+            "app_name": "منصتي",
+            "school_name": app.config["DEFAULT_SCHOOL_NAME"],
+            "now": lambda: datetime.now(timezone.utc),
+            "brand": {
+                "text": os.getenv("BRAND_TEXT", "Developed by"),
+                "name": os.getenv("BRAND_NAME", "Manasety"),
+                "url": os.getenv("BRAND_URL", "https://manasety.ai"),
+                "show": os.getenv("BRAND_SHOW", "1") != "0",
+            },
+        }
 
     @app.errorhandler(401)
     def err_401(_):
